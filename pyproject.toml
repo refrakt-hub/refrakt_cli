@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "refrakt_cli"
+version = "0.1.0"
+description = "Command-line interface for Refrakt ML/DL framework"
+readme = "README.md"
+authors = [
+    { name = "Akshath Mangudi", email = "akshathmangudi@gmail.com" }
+]
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = [
+    "refrakt_core>=0.3.0",
+    "omegaconf>=2.3.0",
+    "torch>=2.0",
+]
+
+[project.scripts]
+refrakt = "refrakt_cli.cli:main"
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+lint.select = ["E", "F", "B", "I"]
+
+[project.urls]
+"Homepage" = "https://github.com/refrakt-hub/refrakt_cli"
+"Bug Tracker" = "https://github.com/refrakt-hub/refrakt_cli/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
