@@ -1,14 +1,14 @@
 """
 Tests for pipeline orchestration.
 """
-import os 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 from omegaconf import OmegaConf
 
 from refrakt_cli.helpers.pipeline_orchestrator import (
+    execute_full_pipeline,
     execute_pipeline_mode,
-    execute_full_pipeline
 )
 
 
@@ -48,14 +48,16 @@ class TestPipelineOrchestrator:
         execute_pipeline_mode("inference", cfg, model_path, logger)
         
         mock_inference.assert_called_once_with(cfg, model_path, logger=logger)
-        logger.info.assert_called_with("�� Starting inference pipeline")
+        logger.info.assert_called_with("🔮 Starting inference pipeline")
 
     def test_execute_pipeline_mode_inference_no_model_path(self):
         """Test inference mode without model path."""
         cfg = OmegaConf.create({"model": {"name": "test"}})
         logger = Mock()
         
-        with pytest.raises(ValueError, match="model_path must be provided for inference mode"):
+        with pytest.raises(
+            ValueError, match="model_path must be provided for inference mode"
+        ):
             execute_pipeline_mode("inference", cfg, None, logger)
 
     @patch('refrakt_cli.helpers.pipeline_orchestrator.execute_full_pipeline')
@@ -67,7 +69,9 @@ class TestPipelineOrchestrator:
         execute_pipeline_mode("pipeline", cfg, None, logger)
         
         mock_full_pipeline.assert_called_once_with(cfg, logger)
-        logger.info.assert_called_with("🔁 Starting full pipeline (train → test → inference)")
+        logger.info.assert_called_with(
+            "🔁 Starting full pipeline (train → test → inference)"
+        )
 
     def test_execute_pipeline_mode_invalid(self):
         """Test executing invalid pipeline mode."""
@@ -81,7 +85,9 @@ class TestPipelineOrchestrator:
     @patch('refrakt_cli.helpers.pipeline_orchestrator.test')
     @patch('refrakt_cli.helpers.pipeline_orchestrator.inference')
     @patch('os.path.join')
-    def test_execute_full_pipeline(self, mock_join, mock_inference, mock_test, mock_train):
+    def test_execute_full_pipeline(
+        self, mock_join, mock_inference, mock_test, mock_train
+    ):
         """Test executing full pipeline."""
         cfg = OmegaConf.create({
             "model": {"name": "autoencoder", "params": {"variant": "complex"}},
@@ -96,8 +102,12 @@ class TestPipelineOrchestrator:
         
         # Verify all pipeline phases were called
         mock_train.assert_called_once_with(cfg, logger=logger)
-        mock_test.assert_called_once_with(cfg, model_path="/save/dir/autoencoder_complex_custom.pth", logger=logger)
-        mock_inference.assert_called_once_with(cfg, model_path="/save/dir/autoencoder_complex_custom.pth", logger=logger)
+        mock_test.assert_called_once_with(
+            cfg, model_path="/save/dir/autoencoder_complex_custom.pth", logger=logger
+        )
+        mock_inference.assert_called_once_with(
+            cfg, model_path="/save/dir/autoencoder_complex_custom.pth", logger=logger
+        )
         
         # Verify logging
         assert logger.info.call_count == 3
@@ -109,7 +119,9 @@ class TestPipelineOrchestrator:
     @patch('refrakt_cli.helpers.pipeline_orchestrator.test')
     @patch('refrakt_cli.helpers.pipeline_orchestrator.inference')
     @patch('os.path.join')
-    def test_execute_full_pipeline_resnet(self, mock_join, mock_inference, mock_test, mock_train):
+    def test_execute_full_pipeline_resnet(
+        self, mock_join, mock_inference, mock_test, mock_train
+    ):
         """Test executing full pipeline with ResNet model."""
         cfg = OmegaConf.create({
             "model": {"name": "resnet"},
@@ -127,7 +139,9 @@ class TestPipelineOrchestrator:
     @patch('refrakt_cli.helpers.pipeline_orchestrator.test')
     @patch('refrakt_cli.helpers.pipeline_orchestrator.inference')
     @patch('os.path.join')
-    def test_execute_full_pipeline_autoencoder_simple(self, mock_join, mock_inference, mock_test, mock_train):
+    def test_execute_full_pipeline_autoencoder_simple(
+        self, mock_join, mock_inference, mock_test, mock_train
+    ):
         """Test executing full pipeline with simple autoencoder."""
         cfg = OmegaConf.create({
             "model": {"name": "autoencoder", "params": {}},  # No variant specified
@@ -145,7 +159,9 @@ class TestPipelineOrchestrator:
     @patch('refrakt_cli.helpers.pipeline_orchestrator.test')
     @patch('refrakt_cli.helpers.pipeline_orchestrator.inference')
     @patch('os.path.join')
-    def test_execute_full_pipeline_custom_dataset(self, mock_join, mock_inference, mock_test, mock_train):
+    def test_execute_full_pipeline_custom_dataset(
+        self, mock_join, mock_inference, mock_test, mock_train
+    ):
         """Test executing full pipeline with custom dataset."""
         cfg = OmegaConf.create({
             "model": {"name": "resnet"},

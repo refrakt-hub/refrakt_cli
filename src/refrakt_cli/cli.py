@@ -17,7 +17,6 @@ import gc
 
 import torch
 from omegaconf import OmegaConf
-
 from refrakt_core.api.helpers.cli_helpers import (
     _apply_config_overrides,
     _execute_pipeline_mode,
@@ -27,6 +26,7 @@ from refrakt_core.api.helpers.cli_helpers import (
     _setup_logging_config,
 )
 from refrakt_core.api.utils.pipeline_utils import setup_logger_and_config
+
 
 def main() -> None:
     """

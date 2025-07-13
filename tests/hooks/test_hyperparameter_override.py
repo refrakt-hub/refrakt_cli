@@ -7,7 +7,6 @@ including smoke tests, sanity checks, and unit tests.
 
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 import pytest
 from omegaconf import OmegaConf

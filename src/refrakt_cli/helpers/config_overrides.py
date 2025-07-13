@@ -8,7 +8,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from refrakt_cli.hooks.hyperparameter_override import (
     apply_overrides,
-    extract_overrides_from_args
+    extract_overrides_from_args,
 )
 
 
@@ -87,16 +87,14 @@ def extract_runtime_config(cfg: DictConfig) -> Dict[str, Any]:
     cfg_dict = OmegaConf.to_container(cfg, resolve=True)
     if not isinstance(cfg_dict, dict):
         raise TypeError(
-            "Config must be a dict after OmegaConf.to_container, got type: {}".format(
-                type(cfg_dict)
-            )
+            f"Config must be a dict after OmegaConf.to_container, "
+            f"got type: {type(cfg_dict)}"
         )
     cfg_dict = cast(Dict[str, Any], cfg_dict)
     runtime_config = cfg_dict.get("runtime", {})
     if isinstance(runtime_config, dict):
         return runtime_config
-    else:
-        return {}
+    return {}
 
 
 def setup_logging_config(

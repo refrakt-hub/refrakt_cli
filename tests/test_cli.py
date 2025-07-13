@@ -2,8 +2,9 @@
 Tests for the main CLI entry point.
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 from omegaconf import OmegaConf
 
 from refrakt_cli.cli import main
@@ -18,7 +19,9 @@ class TestCLI:
     @patch('refrakt_cli.cli.setup_logger_and_config')
     @patch('refrakt_cli.cli._execute_pipeline_mode')
     @patch('refrakt_cli.cli.OmegaConf.load')
-    def test_main_success(self, mock_load, mock_execute, mock_logger, mock_apply, mock_extract, mock_parser):
+    def test_main_success(
+        self, mock_load, mock_execute, mock_logger, mock_apply, mock_extract, mock_parser
+    ):
         """Test successful CLI execution."""
         # Setup mocks
         mock_args = Mock()
@@ -30,7 +33,9 @@ class TestCLI:
         mock_args.override = None
         
         mock_remaining = []
-        mock_parser.return_value.parse_known_args.return_value = (mock_args, mock_remaining)
+        mock_parser.return_value.parse_known_args.return_value = (
+            mock_args, mock_remaining
+        )
         
         mock_cfg = OmegaConf.create({"model": {"name": "test"}})
         mock_load.return_value = mock_cfg
@@ -70,7 +75,9 @@ class TestCLI:
         mock_args.config = "invalid_config.yaml"
         mock_args.override = []  # Fix: make override iterable
         mock_remaining = []
-        mock_parser.return_value.parse_known_args.return_value = (mock_args, mock_remaining)
+        mock_parser.return_value.parse_known_args.return_value = (
+            mock_args, mock_remaining
+        )
         
         mock_load.side_effect = FileNotFoundError("Config file not found")
         
@@ -84,7 +91,9 @@ class TestCLI:
     @patch('refrakt_cli.cli.setup_logger_and_config')
     @patch('refrakt_cli.cli._execute_pipeline_mode')
     @patch('refrakt_cli.cli.OmegaConf.load')
-    def test_main_keyboard_interrupt(self, mock_load, mock_execute, mock_logger, mock_apply, mock_extract, mock_parser):
+    def test_main_keyboard_interrupt(
+        self, mock_load, mock_execute, mock_logger, mock_apply, mock_extract, mock_parser
+    ):
         """Test CLI with keyboard interrupt."""
         mock_args = Mock()
         mock_args.config = "test_config.yaml"
@@ -95,7 +104,9 @@ class TestCLI:
         mock_args.override = None
         
         mock_remaining = []
-        mock_parser.return_value.parse_known_args.return_value = (mock_args, mock_remaining)
+        mock_parser.return_value.parse_known_args.return_value = (
+            mock_args, mock_remaining
+        )
         
         mock_cfg = OmegaConf.create({"model": {"name": "test"}})
         mock_load.return_value = mock_cfg
@@ -120,7 +131,9 @@ class TestCLI:
     @patch('refrakt_cli.cli.setup_logger_and_config')
     @patch('refrakt_cli.cli._execute_pipeline_mode')
     @patch('refrakt_cli.cli.OmegaConf.load')
-    def test_main_pipeline_error(self, mock_load, mock_execute, mock_logger, mock_apply, mock_extract, mock_parser):
+    def test_main_pipeline_error(
+        self, mock_load, mock_execute, mock_logger, mock_apply, mock_extract, mock_parser
+    ):
         """Test CLI with pipeline execution error."""
         mock_args = Mock()
         mock_args.config = "test_config.yaml"
@@ -131,7 +144,9 @@ class TestCLI:
         mock_args.override = None
         
         mock_remaining = []
-        mock_parser.return_value.parse_known_args.return_value = (mock_args, mock_remaining)
+        mock_parser.return_value.parse_known_args.return_value = (
+            mock_args, mock_remaining
+        )
         
         mock_cfg = OmegaConf.create({"model": {"name": "test"}})
         mock_load.return_value = mock_cfg
@@ -148,4 +163,6 @@ class TestCLI:
             with patch('builtins.print'):
                 main()
         
-        mock_logger_instance.error.assert_called_with("Pipeline failed: Pipeline failed")
+        mock_logger_instance.error.assert_called_with(
+            "Pipeline failed: Pipeline failed"
+        )

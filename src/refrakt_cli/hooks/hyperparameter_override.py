@@ -90,7 +90,7 @@ def apply_overrides(config: DictConfig, overrides: List[str]) -> DictConfig:
             path, value = parse_override_arg(override)
             _set_nested_value(config_copy, path, value)
         except Exception as e:
-            raise ValueError(f"Failed to apply override '{override}': {e}")
+            raise ValueError(f"Failed to apply override '{override}': {e}") from e
     return config_copy
 
 

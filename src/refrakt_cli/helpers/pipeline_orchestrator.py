@@ -2,18 +2,17 @@
 Pipeline orchestration for Refrakt CLI.
 """
 
+import os
 from typing import Any, Optional
 
 from omegaconf import DictConfig
-
-from refrakt_core.api import train, test, inference
+from refrakt_core.api.train import train
+from refrakt_core.api.test import test
+from refrakt_core.api.inference import inference
 
 
 def execute_pipeline_mode(
-    mode: str, 
-    cfg: DictConfig, 
-    model_path: Optional[str], 
-    logger: Any
+    mode: str, cfg: DictConfig, model_path: Optional[str], logger: Any
 ) -> None:
     """
     Execute the appropriate pipeline based on mode.
@@ -44,7 +43,7 @@ def execute_pipeline_mode(
             raise ValueError(
                 "model_path must be provided for inference mode"
             )
-        logger.info("�� Starting inference pipeline")
+        logger.info("🔮 Starting inference pipeline")
         inference(cfg, model_path, logger=logger)
 
     elif mode == "pipeline":
@@ -63,8 +62,6 @@ def execute_full_pipeline(cfg: DictConfig, logger: Any) -> None:
         cfg: Configuration object
         logger: Logger instance
     """
-    import os
-    
     # Resolve model name and path
     model_name = cfg.model.name
     if model_name == "autoencoder":
@@ -72,7 +69,7 @@ def execute_full_pipeline(cfg: DictConfig, logger: Any) -> None:
         resolved_model_name = f"autoencoder_{variant}"
     else:
         resolved_model_name = model_name
-    
+
     # Check if using custom dataset
     dataset_params = (
         cfg.dataset.params
@@ -82,10 +79,10 @@ def execute_full_pipeline(cfg: DictConfig, logger: Any) -> None:
     dataset_path = dataset_params.get("path", "") or dataset_params.get("zip_path", "")
     if dataset_path and str(dataset_path).endswith(".zip"):
         resolved_model_name = f"{resolved_model_name}_custom"
-    
+
     save_dir = cfg.trainer.params.save_dir
     model_path = os.path.join(save_dir, f"{resolved_model_name}.pth")
-    
+
     # Execute pipeline phases
     logger.info("🚀 Training phase started")
     train(cfg, logger=logger)

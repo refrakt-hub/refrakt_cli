@@ -2,11 +2,12 @@
 Tests for CLI argument parser.
 """
 
-import pytest
-from unittest.mock import patch, Mock
 import argparse
+from unittest.mock import Mock, patch
 
-from refrakt_cli.helpers.argument_parser import setup_argument_parser, parse_args
+import pytest
+
+from refrakt_cli.helpers.argument_parser import parse_args, setup_argument_parser
 
 
 class TestArgumentParser:

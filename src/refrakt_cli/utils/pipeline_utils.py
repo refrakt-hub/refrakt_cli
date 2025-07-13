@@ -21,37 +21,37 @@ complete pipelines with automatic phase coordination and logging.
 """
 
 import os
+from dataclasses import dataclass
 from typing import Any, cast
 
 from omegaconf import DictConfig
+from refrakt_core.api.core.logger import RefraktLogger  # type: ignore
+from refrakt_core.api.inference import inference  # type: ignore
+from refrakt_core.api.test import test  # type: ignore
+from refrakt_core.api.train import train  # type: ignore
+from refrakt_core.global_logging import set_global_logger  # type: ignore
 
-from refrakt_core.api.core.logger import RefraktLogger
-from refrakt_core.api.inference import inference
-from refrakt_core.api.test import test
-from refrakt_core.api.train import train
-from refrakt_core.global_logging import set_global_logger
+
+@dataclass
+class LoggerConfig:
+    model_name: str
+    log_dir: str
+    log_types: list[str]
+    console: bool
+    debug: bool
+    all_overrides: list[str]
 
 
 def setup_logger_and_config(
     cfg: Any,
-    model_name: str,
-    log_dir: str,
-    log_types: list[str],
-    console: bool,
-    debug: bool,
-    all_overrides: list[str],
+    logger_config: LoggerConfig,
 ) -> RefraktLogger:
     """
     Setup logger and apply configuration overrides.
 
     Args:
         cfg: Configuration object
-        model_name: Name of the model
-        log_dir: Directory for logs
-        log_types: Types of logging to enable
-        console: Whether to log to console
-        debug: Whether to enable debug logging
-        all_overrides: List of configuration overrides
+        logger_config: LoggerConfig dataclass with logger settings
 
     Returns:
         Configured logger instance
@@ -59,27 +59,27 @@ def setup_logger_and_config(
     # Type and value checks
     if not isinstance(cfg, (dict, DictConfig)):
         raise TypeError("cfg must be a dict or DictConfig")
-    if not isinstance(model_name, str) or not model_name:
+    if not isinstance(logger_config.model_name, str) or not logger_config.model_name:
         raise ValueError("model_name must be a non-empty string")
-    if not isinstance(log_dir, str) or not log_dir:
+    if not isinstance(logger_config.log_dir, str) or not logger_config.log_dir:
         raise ValueError("log_dir must be a non-empty string")
     logger = RefraktLogger(
-        model_name=model_name,
-        log_dir=log_dir,
-        log_types=log_types,
-        console=console,
-        debug=debug,
+        model_name=logger_config.model_name,
+        log_dir=logger_config.log_dir,
+        log_types=logger_config.log_types,
+        console=logger_config.console,
+        debug=logger_config.debug,
     )
 
     logger.info(f"Logging initialized. Log file: {logger.log_file}")
-    if all_overrides:
-        logger.info(f"Applied overrides: {all_overrides}")
+    if logger_config.all_overrides:
+        logger.info(f"Applied overrides: {logger_config.all_overrides}")
     set_global_logger(logger.logger)
 
     return logger
 
 
-def execute_training_pipeline(cfg: Any, model_path: str, logger: RefraktLogger) -> None:
+def execute_training_pipeline(cfg: Any, logger: RefraktLogger) -> None:
     """
     Execute the training pipeline.
 
@@ -92,17 +92,16 @@ def execute_training_pipeline(cfg: Any, model_path: str, logger: RefraktLogger) 
     train(cast("str | DictConfig", cfg), logger=logger)
 
 
-def execute_testing_pipeline(cfg: Any, model_path: str, logger: RefraktLogger) -> None:
+def execute_testing_pipeline(cfg: Any, logger: RefraktLogger) -> None:
     """
     Execute the testing pipeline.
 
     Args:
         cfg: Configuration object
-        model_path: Path to model checkpoint
         logger: Logger instance
     """
     logger.info(f"Starting testing with config: {cfg}")
-    test(cast("str | DictConfig", cfg), model_path=model_path, logger=logger)
+    test(cast("str | DictConfig", cfg), logger=logger)
 
 
 def execute_inference_pipeline(
@@ -113,11 +112,10 @@ def execute_inference_pipeline(
 
     Args:
         cfg: Configuration object
-        model_path: Path to model checkpoint
         logger: Logger instance
     """
     logger.info(f"Starting inference with config: {cfg}")
-    inference(cast("str | DictConfig", cfg), model_path=model_path, logger=logger)
+    inference(cast("str | DictConfig", cfg), model_path, logger=logger)
 
 
 def execute_full_pipeline(cfg: Any, logger: RefraktLogger) -> None:

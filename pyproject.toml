@@ -35,3 +35,13 @@ lint.select = ["E", "F", "B", "I"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.optional-dependencies.dev]
+ruff = "*"
+pylint = ">=9.3"
+black = "*"
+mypy = "*"
+isort = "*"
+
+# To update dev dependencies, edit this section and run:
+#   pip install -e .[dev]

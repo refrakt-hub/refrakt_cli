@@ -2,15 +2,16 @@
 Tests for configuration override handling.
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 from omegaconf import OmegaConf
 
 from refrakt_cli.helpers.config_overrides import (
-    extract_overrides,
     apply_config_overrides,
+    extract_overrides,
     extract_runtime_config,
-    setup_logging_config
+    setup_logging_config,
 )
 
 
@@ -24,7 +25,9 @@ class TestConfigOverrides:
         
         remaining = []
         
-        with patch('refrakt_cli.helpers.config_overrides.extract_overrides_from_args') as mock_extract:
+        with patch(
+            'refrakt_cli.helpers.config_overrides.extract_overrides_from_args'
+        ) as mock_extract:
             mock_extract.return_value = ([], [])
             
             result = extract_overrides(mock_args, remaining)
