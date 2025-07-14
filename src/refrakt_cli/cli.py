@@ -17,16 +17,16 @@ import gc
 
 import torch
 from omegaconf import OmegaConf
-from refrakt_core.api.helpers.cli_helpers import (
-    _apply_config_overrides,
-    _execute_pipeline_mode,
-    _extract_overrides,
-    _extract_runtime_config,
-    _setup_argument_parser,
-    _setup_logging_config,
-)
 from refrakt_core.api.utils.pipeline_utils import setup_logger_and_config
+from refrakt_cli.helpers.config_overrides import (
+    setup_logging_config, 
+    extract_runtime_config, 
+    apply_config_overrides, 
+    extract_overrides
+)
 
+from refrakt_cli.helpers.argument_parser import setup_argument_parser
+from refrakt_cli.helpers.pipeline_orchestrator import execute_pipeline_mode
 
 def main() -> None:
     """
@@ -52,16 +52,16 @@ def main() -> None:
     try:
         print("==> Refrakt CLI launched")
 
-        parser = _setup_argument_parser()
+        parser = setup_argument_parser()
         args, remaining = parser.parse_known_args()
 
-        all_overrides = _extract_overrides(args, remaining)
+        all_overrides = extract_overrides(args, remaining)
 
         cfg = OmegaConf.load(args.config)
-        cfg = _apply_config_overrides(cfg, all_overrides)
+        cfg = apply_config_overrides(cfg, all_overrides)
 
-        runtime_cfg = _extract_runtime_config(cfg)
-        mode, log_dir, log_types, console, model_path, debug = _setup_logging_config(
+        runtime_cfg = extract_runtime_config(cfg)
+        mode, log_dir, log_types, console, model_path, debug = setup_logging_config(
             runtime_cfg, args.log_dir
         )
 
@@ -78,7 +78,7 @@ def main() -> None:
         )
 
         try:
-            _execute_pipeline_mode(mode, cfg, model_path or "", logger)
+            execute_pipeline_mode(mode, cfg, model_path or "", logger)
 
         except KeyboardInterrupt:
             logger.warning("Training interrupted by user")
