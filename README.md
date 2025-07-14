@@ -89,6 +89,14 @@ Test files are located in the `tests/` directory, mirroring the main module stru
 
 ---
 
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome!
+
+Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to get started and best practices for contributing to refrakt_cli.
+
+---
+
 ## 📄 License
 
 This repository is licensed under the MIT License. See [LICENSE](LICENSE) for full details.
