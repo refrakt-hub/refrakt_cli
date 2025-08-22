@@ -61,14 +61,18 @@ class TestPipelineOrchestrator:
             execute_pipeline_mode("inference", cfg, None, logger)
 
     @patch('refrakt_cli.helpers.pipeline_orchestrator.execute_full_pipeline')
-    def test_execute_pipeline_mode_pipeline(self, mock_full_pipeline):
+    @patch('refrakt_cli.helpers.pipeline_orchestrator.datetime')
+    def test_execute_pipeline_mode_pipeline(self, mock_datetime, mock_full_pipeline):
         """Test executing full pipeline mode."""
         cfg = OmegaConf.create({"model": {"name": "test"}})
         logger = Mock()
         
+        # Mock the datetime to return a fixed experiment ID
+        mock_datetime.now.return_value.strftime.return_value = "20250101_120000"
+        
         execute_pipeline_mode("pipeline", cfg, None, logger)
         
-        mock_full_pipeline.assert_called_once_with(cfg, logger)
+        mock_full_pipeline.assert_called_once_with(cfg, logger, "20250101_120000")
         logger.info.assert_called_with(
             "🔁 Starting full pipeline (train → test → inference)"
         )
@@ -84,9 +88,9 @@ class TestPipelineOrchestrator:
     @patch('refrakt_cli.helpers.pipeline_orchestrator.train')
     @patch('refrakt_cli.helpers.pipeline_orchestrator.test')
     @patch('refrakt_cli.helpers.pipeline_orchestrator.inference')
-    @patch('os.path.join')
+    @patch('refrakt_cli.helpers.pipeline_orchestrator.datetime')
     def test_execute_full_pipeline(
-        self, mock_join, mock_inference, mock_test, mock_train
+        self, mock_datetime, mock_inference, mock_test, mock_train
     ):
         """Test executing full pipeline."""
         cfg = OmegaConf.create({
@@ -96,21 +100,23 @@ class TestPipelineOrchestrator:
         })
         logger = Mock()
         
-        mock_join.return_value = "/save/dir/autoencoder_complex_custom.pth"
+        # Mock the datetime to return a fixed experiment ID
+        mock_datetime.now.return_value.strftime.return_value = "20250101_120000"
         
-        execute_full_pipeline(cfg, logger)
+        execute_full_pipeline(cfg, logger, "20250101_120000")
         
         # Verify all pipeline phases were called
-        mock_train.assert_called_once_with(cfg, logger=logger)
+        mock_train.assert_called_once_with(cfg, logger=logger, experiment_id="20250101_120000")
         mock_test.assert_called_once_with(
-            cfg, model_path="/save/dir/autoencoder_complex_custom.pth", logger=logger
+            cfg, model_path="./checkpoints/autoencoder_complex_custom_20250101_120000/weights/autoencoder_complex_custom.pth", logger=logger, experiment_id="20250101_120000"
         )
         mock_inference.assert_called_once_with(
-            cfg, model_path="/save/dir/autoencoder_complex_custom.pth", logger=logger
+            cfg, model_path="./checkpoints/autoencoder_complex_custom_20250101_120000/weights/autoencoder_complex_custom.pth", logger=logger, experiment_id="20250101_120000"
         )
         
         # Verify logging
-        assert logger.info.call_count == 3
+        assert logger.info.call_count == 4  # Including experiment ID log
+        logger.info.assert_any_call("🔬 Experiment ID: 20250101_120000")
         logger.info.assert_any_call("🚀 Training phase started")
         logger.info.assert_any_call("🧪 Testing phase started")
         logger.info.assert_any_call("🔮 Inference phase started")
@@ -118,9 +124,9 @@ class TestPipelineOrchestrator:
     @patch('refrakt_cli.helpers.pipeline_orchestrator.train')
     @patch('refrakt_cli.helpers.pipeline_orchestrator.test')
     @patch('refrakt_cli.helpers.pipeline_orchestrator.inference')
-    @patch('os.path.join')
+    @patch('refrakt_cli.helpers.pipeline_orchestrator.datetime')
     def test_execute_full_pipeline_resnet(
-        self, mock_join, mock_inference, mock_test, mock_train
+        self, mock_datetime, mock_inference, mock_test, mock_train
     ):
         """Test executing full pipeline with ResNet model."""
         cfg = OmegaConf.create({
@@ -129,18 +135,22 @@ class TestPipelineOrchestrator:
         })
         logger = Mock()
         
-        mock_join.return_value = "/save/dir/resnet.pth"
+        # Mock the datetime to return a fixed experiment ID
+        mock_datetime.now.return_value.strftime.return_value = "20250101_120000"
         
-        execute_full_pipeline(cfg, logger)
+        execute_full_pipeline(cfg, logger, "20250101_120000")
         
-        mock_join.assert_called_once_with("/save/dir", "resnet.pth")
+        # Verify the model path construction
+        mock_test.assert_called_once_with(
+            cfg, model_path="./checkpoints/resnet_20250101_120000/weights/resnet.pth", logger=logger, experiment_id="20250101_120000"
+        )
 
     @patch('refrakt_cli.helpers.pipeline_orchestrator.train')
     @patch('refrakt_cli.helpers.pipeline_orchestrator.test')
     @patch('refrakt_cli.helpers.pipeline_orchestrator.inference')
-    @patch('os.path.join')
+    @patch('refrakt_cli.helpers.pipeline_orchestrator.datetime')
     def test_execute_full_pipeline_autoencoder_simple(
-        self, mock_join, mock_inference, mock_test, mock_train
+        self, mock_datetime, mock_inference, mock_test, mock_train
     ):
         """Test executing full pipeline with simple autoencoder."""
         cfg = OmegaConf.create({
@@ -149,18 +159,22 @@ class TestPipelineOrchestrator:
         })
         logger = Mock()
         
-        mock_join.return_value = "/save/dir/autoencoder_simple.pth"
+        # Mock the datetime to return a fixed experiment ID
+        mock_datetime.now.return_value.strftime.return_value = "20250101_120000"
         
-        execute_full_pipeline(cfg, logger)
+        execute_full_pipeline(cfg, logger, "20250101_120000")
         
-        mock_join.assert_called_once_with("/save/dir", "autoencoder_simple.pth")
+        # Verify the model path construction
+        mock_test.assert_called_once_with(
+            cfg, model_path="./checkpoints/autoencoder_simple_20250101_120000/weights/autoencoder_simple.pth", logger=logger, experiment_id="20250101_120000"
+        )
 
     @patch('refrakt_cli.helpers.pipeline_orchestrator.train')
     @patch('refrakt_cli.helpers.pipeline_orchestrator.test')
     @patch('refrakt_cli.helpers.pipeline_orchestrator.inference')
-    @patch('os.path.join')
+    @patch('refrakt_cli.helpers.pipeline_orchestrator.datetime')
     def test_execute_full_pipeline_custom_dataset(
-        self, mock_join, mock_inference, mock_test, mock_train
+        self, mock_datetime, mock_inference, mock_test, mock_train
     ):
         """Test executing full pipeline with custom dataset."""
         cfg = OmegaConf.create({
@@ -170,8 +184,12 @@ class TestPipelineOrchestrator:
         })
         logger = Mock()
         
-        mock_join.return_value = "/save/dir/resnet_custom.pth"
+        # Mock the datetime to return a fixed experiment ID
+        mock_datetime.now.return_value.strftime.return_value = "20250101_120000"
         
-        execute_full_pipeline(cfg, logger)
+        execute_full_pipeline(cfg, logger, "20250101_120000")
         
-        mock_join.assert_called_once_with("/save/dir", "resnet_custom.pth")
+        # Verify the model path construction
+        mock_test.assert_called_once_with(
+            cfg, model_path="./checkpoints/resnet_custom_20250101_120000/weights/resnet_custom.pth", logger=logger, experiment_id="20250101_120000"
+        )

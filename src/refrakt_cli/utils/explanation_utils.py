@@ -1,0 +1,31 @@
+from typing import Dict, Any, List
+
+def format_header(metadata: Dict[str, Any], methods: List[str]) -> List[str]:
+    return [
+        "# Comprehensive XAI Analysis",
+        "This report provides explanations for all XAI methods used in this experiment.\n",
+        "## Experiment Summary",
+        f"- **Model**: {metadata.get('model_info', {}).get('name', 'unknown')} ({metadata.get('model_info', {}).get('type', 'unknown')})",
+        f"- **Dataset**: {metadata.get('dataset_info', {}).get('name', 'unknown')}",
+        f"- **XAI Methods**: {', '.join(methods)}",
+        ""
+    ]
+
+def format_method_section(method_name: str, explanation: str) -> List[str]:
+    return [f"## {method_name.upper()} Analysis", explanation, ""]
+
+def format_summary() -> List[str]:
+    return [
+        "## Summary",
+        "This analysis provides insights from multiple XAI methods, each offering a different perspective on the model's decision-making process.",
+        "Individual explanations for each method have been saved as separate files for detailed review."
+    ]
+
+def combine_method_explanations(method_explanations: Dict[str, str], metadata: Dict[str, Any], logger=None) -> str:
+    if not method_explanations:
+        return "No XAI explanations were generated."
+    parts = format_header(metadata, list(method_explanations.keys()))
+    for name, text in method_explanations.items():
+        parts.extend(format_method_section(name, text))
+    parts.extend(format_summary())
+    return "\n".join(parts)

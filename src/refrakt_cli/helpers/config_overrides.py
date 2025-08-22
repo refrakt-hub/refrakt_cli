@@ -133,5 +133,4 @@ def setup_logging_config(
     console = runtime_cfg.get("console", True)
     model_path = runtime_cfg.get("model_path", None)
     debug = runtime_cfg.get("debug", False)
-
     return mode, log_dir, log_types, console, model_path, debug

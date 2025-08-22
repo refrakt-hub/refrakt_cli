@@ -26,7 +26,7 @@ from refrakt_cli.helpers.config_overrides import (
 )
 
 from refrakt_cli.helpers.argument_parser import setup_argument_parser
-from refrakt_cli.helpers.pipeline_orchestrator import execute_pipeline_mode
+from refrakt_cli.helpers.pipeline_manager import execute_pipeline_mode
 
 def main() -> None:
     """
@@ -50,10 +50,10 @@ def main() -> None:
                    log detailed error information before exiting.
     """
     try:
-        print("==> Refrakt CLI launched")
+        # We'll log this after setting up the logger
+        # print("==> Refrakt CLI launched")
 
-        parser = setup_argument_parser()
-        args, remaining = parser.parse_known_args()
+        args, remaining = setup_argument_parser()
 
         all_overrides = extract_overrides(args, remaining)
 
@@ -66,19 +66,31 @@ def main() -> None:
         )
 
         debug = args.debug or debug
+        
+        # Control console output based on debug flag
+        # Always show console output for essential messages, but only show verbose debug messages when debug is enabled
+        console_output = True  # Always enable console for essential messages
 
+        # Ensure model_name includes variant for autoencoders
         if OmegaConf.is_config(cfg):
-            model_name = cfg.model.name
+            if cfg.model.name == "autoencoder":
+                variant = cfg.model.params.get("variant", "simple")
+                model_name = f"autoencoder_{variant}"
+            else:
+                model_name = cfg.model.name
         else:
             model_name = cfg.get("model", {}).get("name", "unknown")
 
-        # Setup logger
+        # Setup logger with controlled console output
         logger = setup_logger_and_config(
-            cfg, model_name, log_dir, log_types, console, debug, all_overrides
+            cfg, model_name, log_dir, log_types, console_output, debug, all_overrides
         )
 
+        # Now we can log the launch message
+        logger.info("==> Refrakt CLI launched")
+
         try:
-            execute_pipeline_mode(mode, cfg, model_path or "", logger)
+            execute_pipeline_mode(mode, cfg, model_path or "", logger, config_path=args.config)
 
         except KeyboardInterrupt:
             logger.warning("Training interrupted by user")

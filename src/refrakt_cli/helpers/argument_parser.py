@@ -44,15 +44,4 @@ def setup_argument_parser() -> argparse.ArgumentParser:
         help="Specify multiple override values (format: path.to.param=value).",
     )
 
-    return parser
-
-
-def parse_args() -> Tuple[argparse.Namespace, List[str]]:
-    """
-    Parse command-line arguments.
-
-    Returns:
-        Tuple of (parsed_args, remaining_args)
-    """
-    parser = setup_argument_parser()
     return parser.parse_known_args()

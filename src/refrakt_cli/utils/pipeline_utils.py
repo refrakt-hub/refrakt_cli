@@ -118,25 +118,12 @@ def execute_inference_pipeline(
     inference(cast("str | DictConfig", cfg), model_path, logger=logger)
 
 
-def execute_full_pipeline(cfg: Any, logger: RefraktLogger) -> None:
-    """
-    Execute the full pipeline (train → test → inference).
-
-    Args:
-        cfg: Configuration object
-        logger: Logger instance
-    """
-    logger.info("🔁 Starting full pipeline (train → test → inference)")
-    save_dir = cfg.trainer.params.save_dir
-
-    # Resolve model name consistently with train/test phases
+def _resolve_model_name_for_pipeline(cfg: Any) -> str:
     if cfg.model.name == "autoencoder":
         variant = cfg.model.params.get("variant", "simple")
         resolved_model_name = f"autoencoder_{variant}"
     else:
         resolved_model_name = cfg.model.name
-
-    # Check if using custom dataset and append _custom suffix
     dataset_params = (
         cfg.dataset.params
         if hasattr(cfg, "dataset") and hasattr(cfg.dataset, "params")
@@ -145,8 +132,21 @@ def execute_full_pipeline(cfg: Any, logger: RefraktLogger) -> None:
     dataset_path = dataset_params.get("path", "") or dataset_params.get("zip_path", "")
     if dataset_path and str(dataset_path).endswith(".zip"):
         resolved_model_name = f"{resolved_model_name}_custom"
+    return resolved_model_name
 
-    model_path = os.path.join(save_dir, f"{resolved_model_name}.pth")
+
+def _construct_model_path(save_dir: str, resolved_model_name: str) -> str:
+    return os.path.join(save_dir, f"{resolved_model_name}.pth")
+
+
+def execute_full_pipeline(cfg: Any, logger: RefraktLogger) -> None:
+    """
+    Execute the full pipeline (train → test → inference).
+    """
+    logger.info("🔁 Starting full pipeline (train → test → inference)")
+    save_dir = cfg.trainer.params.save_dir
+    resolved_model_name = _resolve_model_name_for_pipeline(cfg)
+    model_path = _construct_model_path(save_dir, resolved_model_name)
 
     logger.info("🚀 Training phase started")
     train(cast("str | DictConfig", cfg), logger=logger)
@@ -156,32 +156,3 @@ def execute_full_pipeline(cfg: Any, logger: RefraktLogger) -> None:
 
     logger.info("🔮 Inference phase started")
     inference(cast("str | DictConfig", cfg), model_path=model_path, logger=logger)
-
-
-def resolve_model_name(cfg: Any) -> str:
-    """
-    Resolve model name for pipeline execution.
-
-    Args:
-        cfg: Configuration object
-
-    Returns:
-        Resolved model name
-    """
-    if cfg.model.name == "autoencoder":
-        variant = cfg.model.params.get("variant", "simple")
-        resolved_model_name = f"autoencoder_{variant}"
-    else:
-        resolved_model_name = cfg.model.name
-
-    # Check if using custom dataset and append _custom suffix
-    dataset_params = (
-        cfg.dataset.params
-        if hasattr(cfg, "dataset") and hasattr(cfg.dataset, "params")
-        else {}
-    )
-    dataset_path = dataset_params.get("path", "") or dataset_params.get("zip_path", "")
-    if dataset_path and str(dataset_path).endswith(".zip"):
-        resolved_model_name = f"{resolved_model_name}_custom"
-
-    return resolved_model_name
