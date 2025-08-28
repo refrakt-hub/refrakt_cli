@@ -1,14 +1,13 @@
+import logging
 from typing import Any, Optional
 from omegaconf import DictConfig
 from refrakt_cli.utils.time_utils import get_experiment_id
 from refrakt_core.api.train import train
 from refrakt_core.api.test import test
 from refrakt_core.api.inference import inference
-from refrakt_core.api.utils.pipeline_utils import parse_runtime_hooks
-from refrakt_cli.llm_explainer import run_llm_explanations
-from refrakt_core.error_handling import XAINotSupportedError
+from refrakt_core.api.core.logger import RefraktLogger
 
-def _resolve_model_name_train(cfg: DictConfig):
+def _resolve_model_name_train(cfg: DictConfig) -> str:
     """Resolve model name for training pipeline, including variant for autoencoders."""
     model = cfg.get("model", {})
     name = model.get("name", "unknown")
@@ -25,7 +24,7 @@ def _resolve_model_name_train(cfg: DictConfig):
         resolved_model_name = f"{resolved_model_name}_custom"
     return resolved_model_name
 
-def _handle_post_pipeline_llm(cfg, logger):
+def _handle_post_pipeline_llm(cfg: DictConfig, logger: Optional[RefraktLogger]) -> None:
     from omegaconf import OmegaConf
     from refrakt_core.api.utils.pipeline_utils import parse_runtime_hooks
     from refrakt_core.error_handling import XAINotSupportedError
@@ -43,29 +42,34 @@ def _handle_post_pipeline_llm(cfg, logger):
         is_contrastive = any(indicator in model_name or indicator in model_type or indicator in wrapper_name for indicator in contrastive_indicators)
         if explain_flag:
             if is_contrastive:
-                logger.info("⚠️  XAI components are currently not supported for contrastive family models (SimCLR, DINO, MSN) in refrakt v1. Skipping LLM explainer for contrastive model.")
+                if logger:
+                    logger.info("⚠️  XAI components are currently not supported for contrastive family models (SimCLR, DINO, MSN) in refrakt v1. Skipping LLM explainer for contrastive model.")
             else:
-                logger.info("... triggering the llm explainer (post-pipeline)")
+                if logger:
+                    logger.info("... triggering the llm explainer (post-pipeline)")
                 run_llm_explanations(logger=logger)
     except XAINotSupportedError as e:
-        logger.warning(f"XAI not supported for contrastive models: {e}")
-        logger.info("Skipping LLM explainer for contrastive model")
+        if logger:
+            logger.warning(f"XAI not supported for contrastive models: {e}")
+            logger.info("Skipping LLM explainer for contrastive model")
     except Exception as e:
-        logger.error(f"Failed to run LLM explainer: {e}")
+        if logger:
+            logger.error(f"Failed to run LLM explainer: {e}")
 
 def execute_pipeline_mode(
-    mode: str, cfg, model_path, logger, config_path=None
+    mode: str, cfg: DictConfig, model_path: Optional[str], logger: Optional[RefraktLogger], config_path: Optional[str] = None
 ) -> None:
     """
     Execute the appropriate pipeline based on mode.
     """
     experiment_id = get_experiment_id()
-    logger.info(f"🔬 Experiment ID: {experiment_id}")
+    if logger:
+        logger.info(f"🔬 Experiment ID: {experiment_id}")
     
     PIPELINE_MODES = {
     "train": lambda: train(cfg, logger=logger, experiment_id=experiment_id),
     "test": lambda: test(cfg, model_path=model_path, logger=logger, experiment_id=experiment_id, config_path=config_path),
-    "inference": lambda: inference(cfg, model_path, logger=logger, experiment_id=experiment_id, config_path=config_path),
+    "inference": lambda: inference(cfg, model_path or "", logger=logger, experiment_id=experiment_id, config_path=config_path),
     "pipeline": lambda: execute_full_pipeline(cfg, logger, experiment_id, config_path=config_path)
     }
 
@@ -85,23 +89,17 @@ def execute_full_pipeline(cfg: DictConfig, logger: Any, experiment_id: str, conf
         logger: Logger instance
         experiment_id: Unique experiment ID for consistent directory naming
     """
-    # Train
     logger.info("🚀 Training phase started")
     train(cfg, logger=logger, experiment_id=experiment_id)
     logger.info("✅ Training completed successfully!")
     
-    # Test - use the same experiment ID and construct the model path
     logger.info("🧪 Testing phase started")
     
-    # Resolve the model name to include variant information (e.g., autoencoder_vae)
     resolved_model_name = _resolve_model_name_train(cfg)
     
-    # Construct the model path based on the experiment directory structure
     model_path = f"./checkpoints/{resolved_model_name}_{experiment_id}/weights/{resolved_model_name}.pth"
     test(cfg, model_path=model_path, logger=logger, experiment_id=experiment_id, config_path=config_path)
     logger.info("✅ Testing completed successfully!")
     
-    # Inference
     logger.info("🔮 Inference phase started")
     inference(cfg, model_path, logger=logger, experiment_id=experiment_id, config_path=config_path)
-    # Note: "Inference completed successfully!" is already logged in the inference function

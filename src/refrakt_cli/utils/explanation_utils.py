@@ -1,4 +1,5 @@
-from typing import Dict, Any, List
+import logging
+from typing import Dict, Any, List, Optional
 
 def format_header(metadata: Dict[str, Any], methods: List[str]) -> List[str]:
     return [
@@ -21,7 +22,7 @@ def format_summary() -> List[str]:
         "Individual explanations for each method have been saved as separate files for detailed review."
     ]
 
-def combine_method_explanations(method_explanations: Dict[str, str], metadata: Dict[str, Any], logger=None) -> str:
+def combine_method_explanations(method_explanations: Dict[str, str], metadata: Dict[str, Any], logger: Optional[logging.Logger] = None) -> str:
     if not method_explanations:
         return "No XAI explanations were generated."
     parts = format_header(metadata, list(method_explanations.keys()))
@@ -29,3 +30,19 @@ def combine_method_explanations(method_explanations: Dict[str, str], metadata: D
         parts.extend(format_method_section(name, text))
     parts.extend(format_summary())
     return "\n".join(parts)
+
+
+def extract_metadata_context(metadata: Dict[str, Any]) -> str:
+    """
+    Extract context from metadata.
+    """
+    return "\n".join([f"{key}: {value}" for key, value in metadata.items()])
+
+
+def extract_file_context(npy_files: List[str], config_files: List[str]) -> str:
+    """
+    Extract context from file lists.
+    """
+    npy_context = f"Numpy files: {', '.join(npy_files)}"
+    config_context = f"Config files: {', '.join(config_files)}"
+    return f"{npy_context}\n{config_context}"

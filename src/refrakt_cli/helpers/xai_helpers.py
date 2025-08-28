@@ -1,37 +1,9 @@
 import os
 import glob
-from typing import List, Dict, Any, Tuple
-from refrakt_cli.helpers.core_helpers import organize_xai_files_by_method, generate_method_explanation, combine_method_explanations
-from refrakt_cli.helpers.gemini_helpers import build_system_prompt
-
-def organize_files_by_method(file_paths: List[str], root_dirs: List[str], logger=None) -> Dict[str, Dict[str, List[str]]]:
-    """
-    Organize files by method name based on directory structure.
-
-    Args:
-        file_paths: List of file paths (e.g., NPY or PNG files)
-        root_dirs: List of root directories to search for methods
-        logger: Optional logger
-
-    Returns:
-        Dictionary mapping method names to their associated files
-    """
-    organized_files = {}
-    for file_path in file_paths:
-        path_parts = file_path.split(os.sep)
-        for root_dir in root_dirs:
-            if root_dir in path_parts:
-                try:
-                    idx = path_parts.index(root_dir)
-                    if idx + 2 < len(path_parts):
-                        method_name = path_parts[idx + 2]
-                        if method_name not in organized_files:
-                            organized_files[method_name] = {"files": []}
-                        organized_files[method_name]["files"].append(file_path)
-                except (ValueError, IndexError):
-                    if logger:
-                        logger.warning(f"Error processing file path: {file_path}")
-    return organized_files
+import logging
+from typing import List, Dict, Any, Tuple, Optional
+from refrakt_cli.utils.llm_utils import organize_xai_files
+from refrakt_cli.utils.explanation_utils import combine_method_explanations
 
 def filter_files_by_extension(file_paths: List[str], extensions: List[str]) -> List[str]:
     """
@@ -46,34 +18,41 @@ def filter_files_by_extension(file_paths: List[str], extensions: List[str]) -> L
     """
     return [file_path for file_path in file_paths if any(file_path.endswith(ext) for ext in extensions)]
 
-def organize_files_by_xai_method(npy_files: List[str], png_files: List[str], logger=None) -> Dict[str, List[str]]:
+def organize_files_by_xai_method(npy_files: List[str], png_files: List[str], logger: Optional[logging.Logger] = None) -> Dict[str, List[str]]:
     """Organize files by XAI method."""
-    organized_files = organize_xai_files_by_method(npy_files, png_files, logger=logger)
+    organized_files = organize_xai_files(npy_files, png_files, logger=logger)
     flattened_files = {method: file_list for method, file_dict in organized_files.items() for file_list in file_dict.values()}
     return flattened_files
 
-def generate_and_save_explanations(xai_files_by_method: Dict[str, List[str]], exp_dir: str, metadata: Dict[str, Any], config_files: List[str], logger=None):
+def generate_and_save_explanations(xai_files_by_method: Dict[str, List[str]], exp_dir: str, metadata: Dict[str, Any], config_files: List[str], logger: Optional[logging.Logger] = None) -> Dict[str, str]:
     """Generate explanations for each XAI method and save them as markdown files."""
+    from refrakt_cli.utils.llm_utils import generate_method_explanation
+    from refrakt_cli.utils.gemini_utils import build_system_prompt
+    
     system_prompt = build_system_prompt(logger)
     model_name = os.environ.get('GEMINI_MODEL', '')
 
     method_explanations = {}
     for method_name, method_files in xai_files_by_method.items():
+        if logger:
+            logger.info(f"Generating explanation for XAI method: {method_name} with {len(method_files)} files")
+        
         explanation = generate_method_explanation(
             method_name, {"files": method_files}, metadata, config_files, system_prompt, model_name, logger=logger
         )
         method_explanations[method_name] = explanation
+        
         # Write individual method explanation to markdown file
         save_explanation_to_markdown(method_name, explanation, exp_dir, logger)
 
     return method_explanations
 
-def write_comprehensive_report(exp_dir: str, method_explanations: Dict[str, str], metadata: Dict[str, Any], logger=None):
+def write_comprehensive_report(exp_dir: str, method_explanations: Dict[str, str], metadata: Dict[str, Any], logger: Optional[logging.Logger] = None) -> None:
     """Write a comprehensive report."""
     combined_explanation = combine_method_explanations(method_explanations, metadata, logger=logger)
     save_comprehensive_report(exp_dir, combined_explanation, logger)
 
-def process_xai_files(exp_dir: str, logger=None) -> Tuple[List[str], List[str], List[str]]:
+def process_xai_files(exp_dir: str, logger: Optional[logging.Logger] = None) -> Tuple[List[str], List[str], List[str]]:
     """Find and organize XAI-related files in the experiment directory."""
     npy_files = glob.glob(os.path.join(exp_dir, '**', '*.npy'), recursive=True)
     png_files = glob.glob(os.path.join(exp_dir, '**', '*.png'), recursive=True)
@@ -89,7 +68,7 @@ def process_xai_files(exp_dir: str, logger=None) -> Tuple[List[str], List[str], 
     
     return npy_files, png_files, config_files
 
-def save_explanation_to_markdown(method_name: str, explanation: str, exp_dir: str, logger=None):
+def save_explanation_to_markdown(method_name: str, explanation: str, exp_dir: str, logger: Optional[logging.Logger] = None) -> None:
     """Save the explanation for a method to a markdown file in the checkpoints directory."""
     # Extract experiment info from the exp_dir path
     # exp_dir should be like: explanations/autoencoder_simple_20250807_111150
@@ -113,7 +92,7 @@ def save_explanation_to_markdown(method_name: str, explanation: str, exp_dir: st
         if logger:
             logger.warning(f"[XAI] Failed to write markdown for {method_name}: {e}")
 
-def save_comprehensive_report(exp_dir: str, combined_explanation: str, logger=None):
+def save_comprehensive_report(exp_dir: str, combined_explanation: str, logger: Optional[logging.Logger] = None) -> None:
     """Save the comprehensive report to a markdown file in the checkpoints directory."""
     # Extract experiment info from the exp_dir path
     # exp_dir should be like: explanations/autoencoder_simple_20250807_111150

@@ -1,20 +1,21 @@
 import os
 import yaml
+import logging
 from typing import Dict, Any, List, Optional, Tuple
 import glob
 import time
-from .log_helpers import sort_log_files_by_time, extract_key_metrics_from_logs
+from refrakt_cli.utils.log_utils import sort_log_files_by_time, extract_key_metrics_from_logs
 
-def _read_yaml_file(config_file: str) -> dict:
+def _read_yaml_file(config_file: str) -> Dict[str, Any]:
     """Read and parse a YAML file, returning its contents as a dict."""
     with open(config_file, 'r') as f:
         return yaml.safe_load(f)
 
-def _log_config_event(logger, message: str) -> None:
+def _log_config_event(logger: Optional[logging.Logger], message: str) -> None:
     if logger:
         logger.info(message)
 
-def load_config_files(config_files: List[str], logger=None) -> Dict[str, Any]:
+def load_config_files(config_files: List[str], logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     """
     Load and parse configuration files.
 
@@ -36,7 +37,7 @@ def load_config_files(config_files: List[str], logger=None) -> Dict[str, Any]:
                     logger.warning(f"Could not parse config file: {e}")
     return config_data
 
-def merge_training_results(latest_metrics: Dict[str, Any], training_results: Optional[Dict[str, Any]], logger=None) -> Dict[str, Any]:
+def merge_training_results(latest_metrics: Dict[str, Any], training_results: Optional[Dict[str, Any]], logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     """
     Merge training results into the latest metrics.
 
@@ -75,7 +76,7 @@ def _parse_experiment_id_from_name(exp_dir_name: str) -> Tuple[str, str]:
     experiment_id = parts[1] if len(parts) > 1 else "unknown"
     return model_name, experiment_id
 
-def extract_experiment_id(exp_dir: str, logger=None) -> Dict[str, str]:
+def extract_experiment_id(exp_dir: str, logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     """Extract metadata from experiment directory."""
     exp_dir_name = os.path.basename(exp_dir)
     model_name, experiment_id = _parse_experiment_id_from_name(exp_dir_name)
@@ -98,7 +99,7 @@ def _validate_model_type(model_type: str) -> str:
     valid_types = {"classification", "regression", "clustering"}
     return model_type if model_type in valid_types else "unknown"
 
-def determine_model_type(config: Dict[str, Any], logger=None) -> Optional[str]:
+def determine_model_type(config: Dict[str, Any], logger: Optional[logging.Logger] = None) -> Optional[str]:
     """Determine the model type from the configuration. Only return type for autoencoder variants."""
     model_name = config.get("name", "").lower()
     model_wrapper = config.get("wrapper", "").lower()
@@ -121,7 +122,7 @@ def determine_model_type(config: Dict[str, Any], logger=None) -> Optional[str]:
         logger.info(f"Non-autoencoder model detected: {model_name}, no type field added")
     return None
 
-def extract_model_metadata(exp_dir: str, logger=None) -> dict:
+def extract_model_metadata(exp_dir: str, logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     """
     Extract metadata related to the model from the experiment directory.
 
@@ -163,7 +164,7 @@ def extract_model_metadata(exp_dir: str, logger=None) -> dict:
 
     return model_metadata
 
-def extract_dataset_metadata(exp_dir: str, logger=None) -> dict:
+def extract_dataset_metadata(exp_dir: str, logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     """
     Extract metadata related to the dataset from the experiment directory.
 
@@ -200,11 +201,11 @@ def extract_dataset_metadata(exp_dir: str, logger=None) -> dict:
 
     return dataset_metadata
 
-def extract_experiment_metadata_helper(checkpoints_dir: str, logger=None) -> Dict[str, Any]:
+def extract_experiment_metadata_helper(checkpoints_dir: str, logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     """Extract experiment metadata such as experiment_id."""
     experiment_id = extract_experiment_id(checkpoints_dir, logger)
     if logger:
-        logger.info(f"[DEBUG] Extracted experiment_id: {experiment_id}")
+        logger.debug(f"[DEBUG] Extracted experiment_id: {experiment_id}")
     return {"experiment_id": experiment_id}
 
 def _normalize_filename(config_file: str) -> str:
@@ -246,10 +247,10 @@ def initialize_metadata_structure(experiment_metadata: Dict[str, Any], has_train
         "run_metadata": {}
     }
 
-def _merge_training_results_into_metrics(latest_metrics: Dict[str, Any], training_results: Optional[Dict[str, Any]], logger=None) -> Dict[str, Any]:
+def _merge_training_results_into_metrics(latest_metrics: Dict[str, Any], training_results: Optional[Dict[str, Any]], logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     if training_results:
         if logger:
-            logger.info(f"[DEBUG] Merging training_results into latest_metrics: {training_results}")
+            logger.debug(f"[DEBUG] Merging training_results into latest_metrics: {training_results}")
         for key, value in training_results.items():
             if value is not None:
                 # Only update if current value is N/A or empty, or if new value is better (non-N/A)
@@ -272,20 +273,20 @@ def _add_proxy_accuracy_if_needed(latest_metrics: Dict[str, Any], training_resul
             pass
 
 
-def extract_performance_metrics(base_dir: str, training_results: Optional[Dict[str, Any]], logger=None) -> Dict[str, Any]:
+def extract_performance_metrics(base_dir: str, training_results: Optional[Dict[str, Any]], logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     """Extract performance metrics from logs and training results."""
     log_files = glob.glob(os.path.join(base_dir, 'logs', '**', '*.log'), recursive=True)
-    latest_metrics = extract_metrics_from_logs(log_files, logger)
+    latest_metrics = extract_key_metrics_from_logs(log_files, logger)
     if logger:
-        logger.info(f"[DEBUG] latest_metrics after log extraction: {latest_metrics}")
+        logger.debug(f"[DEBUG] latest_metrics after log extraction: {latest_metrics}")
     latest_metrics = _merge_training_results_into_metrics(latest_metrics, training_results, logger)
     _add_proxy_accuracy_if_needed(latest_metrics, training_results)
     if logger:
-        logger.info(f"[DEBUG] Final performance_metrics: {latest_metrics}")
+        logger.debug(f"[DEBUG] Final performance_metrics: {latest_metrics}")
     return latest_metrics
 
 
-def _normalize_training_results(training_results: Optional[dict]) -> Optional[dict]:
+def _normalize_training_results(training_results: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     """Normalize training_results to a dict if possible."""
     if training_results is None:
         return None
@@ -295,13 +296,13 @@ def _normalize_training_results(training_results: Optional[dict]) -> Optional[di
         return training_results
     return None
 
-def _update_metrics_with_numeric_values(latest_metrics: Dict[str, Any], training_results: dict) -> None:
+def _update_metrics_with_numeric_values(latest_metrics: Dict[str, Any], training_results: Dict[str, Any]) -> None:
     """Update metrics with numeric or numeric-string values from training_results."""
     for k, v in training_results.items():
         if isinstance(v, (int, float)) or (isinstance(v, str) and v.replace('.', '', 1).isdigit()):
             latest_metrics[k] = str(v)
 
-def _update_metrics_with_non_numeric_values(latest_metrics: Dict[str, Any], training_results: dict) -> None:
+def _update_metrics_with_non_numeric_values(latest_metrics: Dict[str, Any], training_results: Dict[str, Any]) -> None:
     """Update metrics with non-numeric, non-empty values from training_results if not already present."""
     for k, v in training_results.items():
         if v not in [None, '', 'N/A'] and k not in latest_metrics:
@@ -316,7 +317,7 @@ def _merge_metrics_dicts(latest_metrics: Dict[str, Any], training_results: Optio
     return latest_metrics
 
 
-def merge_training_results_with_metrics(training_results: Optional[Dict[str, Any]], latest_metrics: Dict[str, Any], logger=None) -> Dict[str, Any]:
+def merge_training_results_with_metrics(training_results: Optional[Dict[str, Any]], latest_metrics: Dict[str, Any], logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     return _merge_metrics_dicts(latest_metrics, training_results)
 
 
@@ -325,14 +326,14 @@ def _filter_recent_log_files(log_files_with_time: List[Tuple[str, float]], max_a
     return [item for item in log_files_with_time if current_time - float(item[1]) <= max_age_seconds]
 
 
-def _extract_metrics_from_log_file(log_file: str, metrics: Dict[str, Any], logger=None) -> Dict[str, Any]:
+def _extract_metrics_from_log_file(log_file: str, metrics: Dict[str, Any], logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     try:
         with open(log_file, 'r') as f:
             lines = f.readlines()
         
         # Extract metrics from lines
         for line in lines:
-            from .log_helpers import _extract_accuracy, _extract_loss, _extract_epoch
+            from refrakt_cli.utils.log_utils import _extract_accuracy, _extract_loss, _extract_epoch
             
             acc_val = _extract_accuracy(line)
             if acc_val is not None:
@@ -347,7 +348,7 @@ def _extract_metrics_from_log_file(log_file: str, metrics: Dict[str, Any], logge
                 metrics['epochs_completed'] = str(epoch_val)
 
         # Extract training time from all lines
-        from .log_helpers import _extract_training_time
+        from refrakt_cli.utils.log_utils import _extract_training_time
         training_time = _extract_training_time(lines)
         if training_time is not None:
             metrics['training_time'] = str(round(training_time, 2))
@@ -358,31 +359,11 @@ def _extract_metrics_from_log_file(log_file: str, metrics: Dict[str, Any], logge
             logger.warning(f"Failed to extract metrics from {log_file}: {e}")
         return metrics
 
-
-def extract_metrics_from_logs(log_files: List[str], logger=None) -> Dict[str, Any]:
-    """
-    Extract performance metrics from log files.
-    Prioritizes the most recent log files and filters by relevance.
-    """
-    metrics = {
-        "best_accuracy": "N/A",
-        "final_loss": "N/A",
-        "epochs_completed": "N/A",
-        "training_time": "N/A"
-    }
-    log_files_with_time = _sort_log_files_by_time(log_files)
-    recent_log_files = _filter_recent_log_files(log_files_with_time)
-    for log_file, _ in recent_log_files:
-        metrics = _extract_metrics_from_log_file(log_file, metrics, logger)
-        if metrics["best_accuracy"] != "N/A":
-            break
-    return metrics
-
 def filter_na_metrics(metrics: Dict[str, Any]) -> Dict[str, Any]:
     """Filter out metrics with value 'N/A'."""
     return {k: v for k, v in metrics.items() if v != "N/A"}
 
-def _extract_model_info(config_data: Dict[str, Any]) -> dict:
+def _extract_model_info(config_data: Dict[str, Any]) -> Dict[str, Any]:
     if 'model' not in config_data:
         return {}
     model = config_data['model']
@@ -398,9 +379,18 @@ def _extract_model_info(config_data: Dict[str, Any]) -> dict:
     if model_type is not None:
         model_info['type'] = model_type
     
+    # Add fusion information if available
+    if 'fusion' in model:
+        fusion_info = model['fusion']
+        model_info['fusion'] = {
+            'type': fusion_info.get('type', 'unknown'),
+            'model': fusion_info.get('model', 'unknown'),
+            'params': fusion_info.get('params', {})
+        }
+    
     return model_info
 
-def _extract_trainer_info(config_data: Dict[str, Any]) -> dict:
+def _extract_trainer_info(config_data: Dict[str, Any]) -> Dict[str, Any]:
     if 'trainer' not in config_data:
         return {}
     trainer = config_data['trainer']
@@ -410,7 +400,7 @@ def _extract_trainer_info(config_data: Dict[str, Any]) -> dict:
         'epochs': trainer.get('params', {}).get('num_epochs', 'N/A')
     }
 
-def _extract_dataset_info(config_data: Dict[str, Any]) -> dict:
+def _extract_dataset_info(config_data: Dict[str, Any]) -> Dict[str, Any]:
     if 'dataset' not in config_data:
         return {}
     dataset = config_data['dataset']
@@ -420,7 +410,7 @@ def _extract_dataset_info(config_data: Dict[str, Any]) -> dict:
         'transforms': dataset.get('transform', [])
     }
 
-def _extract_xai_viz_info(config_data: Dict[str, Any]) -> tuple:
+def _extract_xai_viz_info(config_data: Dict[str, Any]) -> Tuple[Any, ...]:
     xai_info = {}
     viz_info = {}
     if 'runtime' in config_data and 'hooks' in config_data['runtime']:
@@ -537,19 +527,6 @@ def extract_run_metadata(config_files: List[str], checkpoints_dir: str) -> Dict[
         'png_files': [os.path.basename(f) for f in filtered_png]
     }
 
-def extract_experiment_metadata(config_files: List[str], base_dir: str, checkpoints_dir: str, logger=None) -> Dict[str, Any]:
-    """Extract experiment metadata and initialize metadata structure."""
-    if logger:
-        logger.info("Extracting experiment metadata...")
-
-    experiment_metadata = extract_experiment_metadata_helper(checkpoints_dir, logger)
-    has_train, has_inference = determine_train_inference(config_files)
-
-    metadata = initialize_metadata_structure(experiment_metadata, has_train, has_inference)
-    metadata['experiment_info'] = fix_experiment_info_structure(experiment_metadata, has_train, has_inference)
-
-    return metadata
-
 def fix_experiment_info_structure(experiment_metadata: Dict[str, Any], has_train: bool, has_inference: bool) -> Dict[str, Any]:
     """Fix the structure of experiment_info in metadata."""
     experiment_id = experiment_metadata.get('experiment_id')
@@ -566,7 +543,7 @@ def fix_experiment_info_structure(experiment_metadata: Dict[str, Any], has_train
         'has_inference': has_inference
     }
 
-def robust_merge_performance_metrics(base_dir: str, training_results: Optional[dict], logger=None) -> dict:
+def robust_merge_performance_metrics(base_dir: str, training_results: Optional[Dict[str, Any]], logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     latest_metrics = extract_performance_metrics(base_dir, training_results, logger)
     return _merge_metrics_dicts(latest_metrics, training_results)
 
@@ -588,8 +565,8 @@ def _extract_metrics_from_log_lines_helper(lines: List[str], metrics: Dict[str, 
     return extract_key_metrics_from_logs(lines, metrics)
 
 
-def _collect_files_by_extension(explanations_dir: str, extensions: tuple) -> dict:
-    files = {ext: [] for ext in extensions}
+def _collect_files_by_extension(explanations_dir: str, extensions: Tuple[str, ...]) -> Dict[str, List[str]]:
+    files: Dict[str, List[str]] = {ext: [] for ext in extensions}
     for root, _, fs in os.walk(explanations_dir):
         for file in fs:
             for ext in extensions:
@@ -599,7 +576,7 @@ def _collect_files_by_extension(explanations_dir: str, extensions: tuple) -> dic
     return files
 
 
-def _filter_files_by_experiment_id(files: list, experiment_id: str) -> list:
+def _filter_files_by_experiment_id(files: List[str], experiment_id: str) -> List[str]:
     exp_prefix_train = f"{experiment_id}/train"
     exp_prefix_inference = f"{experiment_id}/inference"
     return [f for f in files if f.startswith(exp_prefix_train) or f.startswith(exp_prefix_inference)]
@@ -615,7 +592,7 @@ def extract_run_files_metadata(explanations_dir: str, experiment_id: str) -> Dic
     }
 
 
-def collect_explanations_run_metadata(checkpoints_dir: str, experiment_id: str) -> dict:
+def collect_explanations_run_metadata(checkpoints_dir: str, experiment_id: str) -> Dict[str, Any]:
     explanations_dir = os.path.join(checkpoints_dir, 'explanations')
     files = _collect_files_by_extension(explanations_dir, ('.npy', '.png'))
     filtered_npy = _filter_files_by_experiment_id(files['.npy'], experiment_id)

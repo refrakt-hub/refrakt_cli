@@ -1,6 +1,7 @@
 import os
 import time
-from typing import List, Dict, Any, Optional
+import logging
+from typing import List, Dict, Any, Optional, Tuple
 
 def sort_log_files_by_time(log_files: List[str]) -> List[str]:
     """
@@ -168,7 +169,7 @@ def _extract_training_time(lines: List[str]) -> Optional[float]:
         pass
     return None
 
-def extract_key_metrics_from_logs(log_files: List[str], logger=None) -> Dict[str, Any]:
+def extract_key_metrics_from_logs(log_files: List[str], logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     """
     Extract key performance metrics from log files.
 
@@ -216,7 +217,7 @@ def extract_key_metrics_from_logs(log_files: List[str], logger=None) -> Dict[str
 
     return metrics
 
-def filter_recent_logs(log_files: List[str], max_age_seconds: int = 86400, logger=None) -> List[str]:
+def filter_recent_logs(log_files: List[str], max_age_seconds: int = 86400, logger: Optional[logging.Logger] = None) -> List[str]:
     """
     Filter log files to include only those modified within a certain time frame.
 

@@ -1,5 +1,6 @@
 import os
-from typing import Any, Dict, Optional
+import logging
+from typing import Any, Dict, List, Optional, Tuple
 from refrakt_cli.helpers.metadata_helpers import extract_performance_metrics
 
 def create_experiment_info(experiment_metadata: Dict[str, Any], has_train: bool, has_inference: bool) -> Dict[str, Any]:
@@ -51,13 +52,13 @@ def _merge_metrics_dicts(latest_metrics: Dict[str, Any], training_results_dict: 
     return latest_metrics
 
 
-def merge_performance_metrics(base_dir: str, training_results: Optional[Any], logger=None) -> Dict[str, Any]:
+def merge_performance_metrics(base_dir: str, training_results: Optional[Any], logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     latest_metrics = extract_performance_metrics(base_dir, training_results, logger)
     training_results_dict = _extract_training_results_dict(training_results)
     return _merge_metrics_dicts(latest_metrics, training_results_dict)
 
 
-def _collect_explanation_files(explanations_dir: str) -> tuple[list, list]:
+def _collect_explanation_files(explanations_dir: str) -> Tuple[List[str], List[str]]:
     """Collect all npy and png files under explanations_dir."""
     npy_files, png_files = [], []
     for root, _, files in os.walk(explanations_dir):
@@ -71,7 +72,7 @@ def _collect_explanation_files(explanations_dir: str) -> tuple[list, list]:
     return npy_files, png_files
 
 
-def _filter_files_by_experiment_id(files: list, experiment_id: str) -> list:
+def _filter_files_by_experiment_id(files: List[str], experiment_id: str) -> List[str]:
     """Filter files to those under train/inference for the given experiment_id and return relative paths."""
     # Handle different experiment ID formats found in the file paths
     experiment_patterns = [
@@ -96,7 +97,7 @@ def _filter_files_by_experiment_id(files: list, experiment_id: str) -> list:
     return filtered_files
 
 
-def collect_run_metadata(checkpoints_dir: str, experiment_id: str, logger=None) -> Dict[str, Any]:
+def collect_run_metadata(checkpoints_dir: str, experiment_id: str, logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     """Collect run metadata including NPY and PNG files from explanations directories."""
     # First, try the local explanations directory (within checkpoints)
     explanations_dir = os.path.join(checkpoints_dir, 'explanations')

@@ -1,7 +1,9 @@
 import os
+import logging
 import vertexai
+from typing import Optional
 
-def initialize_vertex_ai(logger=None):
+def initialize_vertex_ai(logger: Optional[logging.Logger] = None) -> None:
     """
     Initialize Vertex AI with project and location from environment variables.
 

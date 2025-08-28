@@ -25,7 +25,7 @@ from refrakt_cli.helpers.config_overrides import (
     extract_overrides
 )
 
-from refrakt_cli.helpers.argument_parser import setup_argument_parser
+from refrakt_cli.utils.cli_utils import setup_argument_parser
 from refrakt_cli.helpers.pipeline_manager import execute_pipeline_mode
 
 def main() -> None:

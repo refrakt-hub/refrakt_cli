@@ -6,7 +6,7 @@ import argparse
 from typing import List, Tuple
 
 
-def setup_argument_parser() -> argparse.ArgumentParser:
+def setup_argument_parser() -> Tuple[argparse.Namespace, List[str]]:
     """
     Setup argument parser for CLI with all required arguments.
 
@@ -15,7 +15,7 @@ def setup_argument_parser() -> argparse.ArgumentParser:
     file path, logging options, and override capabilities.
 
     Returns:
-        Configured argument parser ready for CLI usage
+        Tuple of parsed arguments and unknown arguments from parse_known_args()
     """
     parser = argparse.ArgumentParser(
         description="Refrakt CLI - ML/DL Training Framework"

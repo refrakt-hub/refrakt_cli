@@ -1,89 +1,26 @@
-# Shared core functions to resolve circular imports
+"""
+Metadata extraction utilities for Refrakt CLI.
 
-from typing import List, Dict, Any, Optional
-from vertexai.generative_models import GenerativeModel
-import os
+This module contains the extract_comprehensive_metadata function and related
+utilities that were previously part of shared_core.py.
+"""
+
 import json
+import os
+import logging
+from typing import Any, Dict, List, Optional
+
 from refrakt_cli.helpers.metadata_helpers import (
     extract_experiment_metadata_helper,
     determine_train_inference,
     initialize_metadata_structure,
     load_config_files,
-    extract_performance_metrics,
     extract_metadata_from_config
 )
 from refrakt_cli.utils.metadata_utils import create_experiment_info, merge_performance_metrics, collect_run_metadata
-from refrakt_cli.utils.explanation_utils import combine_method_explanations
 
-def call_gemini_with_retry(model: GenerativeModel, content_parts: Any, max_retries: int = 3, logger=None) -> str:
-    """
-    Call Gemini with exponential backoff retry logic for rate limiting.
-    """
-    for attempt in range(max_retries + 1):
-        try:
-            if logger:
-                logger.info(f"Calling Gemini API (attempt {attempt + 1}/{max_retries + 1})")
-            response = model.generate_content(content_parts)
-            if logger:
-                logger.info(f"Successfully received response from Gemini API")
-            return response.text
-        except Exception as e:
-            if logger:
-                logger.error(f"Error calling Gemini: {e}")
-            if attempt == max_retries:
-                return f"[ERROR] Failed to generate explanation: {e}"
-    return "[ERROR] Unexpected error in retry logic"
 
-def generate_method_explanation(
-    method_name: str, 
-    method_files: Dict[str, List[str]], 
-    metadata: Dict[str, Any], 
-    config_files: List[str], 
-    system_prompt: str, 
-    model_name: str, 
-    logger=None
-) -> str:
-    """
-    Generate explanation for a specific XAI method.
-    """
-    try:
-        content_parts = [
-            f"Method: {method_name}",
-            f"Metadata: {metadata}",
-            f"Config: {config_files}"
-        ]
-        model = GenerativeModel(model_name)
-        explanation = call_gemini_with_retry(model, content_parts, logger=logger)
-        if logger:
-            logger.info(f"Generated explanation for {method_name}")
-        return explanation
-    except Exception as e:
-        if logger:
-            logger.error(f"Error generating explanation for {method_name}: {e}")
-        return f"[ERROR] {e}"
-
-def organize_xai_files_by_method(file_paths: List[str], root_dirs: List[str], logger=None) -> Dict[str, Dict[str, List[str]]]:
-    """
-    Organize files by method name based on directory structure.
-    """
-    organized_files = {}
-    for file_path in file_paths:
-        path_parts = file_path.split(os.sep)
-        for root_dir in root_dirs:
-            if root_dir in path_parts:
-                try:
-                    idx = path_parts.index(root_dir)
-                    if idx + 2 < len(path_parts):
-                        method_name = path_parts[idx + 2]
-                        if method_name not in organized_files:
-                            organized_files[method_name] = {"files": []}
-                        organized_files[method_name]["files"].append(file_path)
-                except (ValueError, IndexError):
-                    if logger:
-                        logger.warning(f"Error processing file path: {file_path}")
-    return organized_files
-
-def extract_comprehensive_metadata(config_files: List[str], base_dir: str, checkpoints_dir: str, logger=None, training_results: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def extract_comprehensive_metadata(config_files: List[str], base_dir: str, checkpoints_dir: str, logger: Optional[logging.Logger] = None, training_results: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Extract comprehensive metadata from config files, logs, and training results.
     Implements smart merging to preserve good metrics from previous phases.
@@ -99,7 +36,7 @@ def extract_comprehensive_metadata(config_files: List[str], base_dir: str, check
             with open(summary_metrics_path, 'r') as f:
                 existing_metadata = json.load(f)
                 if logger:
-                    logger.info(f"[DEBUG] Found existing metadata, preserving good values")
+                    logger.debug(f"[DEBUG] Found existing metadata, preserving good values")
         except Exception as e:
             if logger:
                 logger.warning(f"Could not read existing summary_metrics.json: {e}")
@@ -142,7 +79,7 @@ def extract_comprehensive_metadata(config_files: List[str], base_dir: str, check
                 
         metadata["performance_metrics"] = merged_perf
         if logger:
-            logger.info(f"[DEBUG] Merged performance metrics: {merged_perf}")
+            logger.debug(f"[DEBUG] Merged performance metrics: {merged_perf}")
     else:
         metadata["performance_metrics"] = new_performance_metrics
 
@@ -186,11 +123,12 @@ def extract_comprehensive_metadata(config_files: List[str], base_dir: str, check
         del metadata['run_metadata']['config_files']
 
     if logger:
-        logger.info(f"[DEBUG] About to write summary: experiment_id={metadata['experiment_info']['experiment_id']}, metadata={json.dumps(metadata, indent=2)}")
+        logger.debug(f"[DEBUG] About to write summary: experiment_id={metadata['experiment_info']['experiment_id']}, metadata={json.dumps(metadata, indent=2)}")
 
     return metadata
 
-def collect_runtime_xai_info(checkpoints_dir: str, logger=None) -> Dict[str, Any]:
+
+def collect_runtime_xai_info(checkpoints_dir: str, logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     """
     Collect runtime XAI method information including layer details.
     This function looks for XAI instances that may have been saved or can be introspected.
@@ -218,7 +156,8 @@ def collect_runtime_xai_info(checkpoints_dir: str, logger=None) -> Dict[str, Any
     
     return runtime_xai_info
 
-def save_runtime_xai_info(xai_instance, method_name: str, params: Dict[str, Any], base_dir: str, logger=None):
+
+def save_runtime_xai_info(xai_instance: Any, method_name: str, params: Dict[str, Any], base_dir: str, logger: Optional[logging.Logger] = None) -> None:
     """
     Save runtime XAI method information to a JSON file.
     This captures method parameters, layer information, and other runtime details.

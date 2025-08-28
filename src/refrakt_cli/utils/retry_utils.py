@@ -1,7 +1,8 @@
 import os
 import random
 import time
-from typing import Tuple
+import logging
+from typing import Tuple, Optional
 
 def get_retry_parameters(max_retries: int) -> Tuple[int, float]:
     """
@@ -17,7 +18,7 @@ def get_retry_parameters(max_retries: int) -> Tuple[int, float]:
     base_delay = float(os.environ.get('LLM_BASE_DELAY', '3.0'))
     return max_retries, base_delay
 
-def handle_rate_limit_error(attempt: int, max_retries: int, base_delay: float, logger=None):
+def handle_rate_limit_error(attempt: int, max_retries: int, base_delay: float, logger: Optional[logging.Logger] = None) -> None:
     """
     Handle rate limit errors with exponential backoff and jitter.
 
