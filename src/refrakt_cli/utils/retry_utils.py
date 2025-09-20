@@ -1,8 +1,9 @@
+import logging
 import os
 import random
 import time
-import logging
-from typing import Tuple, Optional
+from typing import Optional, Tuple
+
 
 def get_retry_parameters(max_retries: int) -> Tuple[int, float]:
     """
@@ -14,11 +15,17 @@ def get_retry_parameters(max_retries: int) -> Tuple[int, float]:
     Returns:
         Tuple of maximum retries and base delay
     """
-    max_retries = int(os.environ.get('LLM_MAX_RETRIES', max_retries))
-    base_delay = float(os.environ.get('LLM_BASE_DELAY', '3.0'))
+    max_retries = int(os.environ.get("LLM_MAX_RETRIES", max_retries))
+    base_delay = float(os.environ.get("LLM_BASE_DELAY", "3.0"))
     return max_retries, base_delay
 
-def handle_rate_limit_error(attempt: int, max_retries: int, base_delay: float, logger: Optional[logging.Logger] = None) -> None:
+
+def handle_rate_limit_error(
+    attempt: int,
+    max_retries: int,
+    base_delay: float,
+    logger: Optional[logging.Logger] = None,
+) -> None:
     """
     Handle rate limit errors with exponential backoff and jitter.
 
@@ -31,9 +38,13 @@ def handle_rate_limit_error(attempt: int, max_retries: int, base_delay: float, l
     Returns:
         None
     """
-    wait_time = (base_delay * (2 ** attempt)) + random.uniform(0, 2)
+    wait_time = (base_delay * (2**attempt)) + random.uniform(0, 2)
     if logger:
-        logger.warning(f"Rate limit hit (attempt {attempt + 1}/{max_retries + 1}). Waiting {wait_time:.2f}s before retry...")
+        logger.warning(
+            f"Rate limit hit (attempt {attempt + 1}/{max_retries + 1}). Waiting {wait_time:.2f}s before retry..."
+        )
     else:
-        print(f"Rate limit hit (attempt {attempt + 1}/{max_retries + 1}). Waiting {wait_time:.2f}s before retry...")
+        print(
+            f"Rate limit hit (attempt {attempt + 1}/{max_retries + 1}). Waiting {wait_time:.2f}s before retry..."
+        )
     time.sleep(wait_time)

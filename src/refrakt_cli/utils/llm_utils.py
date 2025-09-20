@@ -7,35 +7,37 @@ across multiple helper files.
 """
 
 import json
-import os
 import logging
+import os
 from typing import Any, Dict, List, Optional
 
 from vertexai.generative_models import GenerativeModel, Part
 
 
 def call_gemini_with_retry(
-    model: GenerativeModel, 
-    content_parts: Any, 
-    max_retries: int = 3, 
-    logger: Optional[logging.Logger] = None
+    model: GenerativeModel,
+    content_parts: Any,
+    max_retries: int = 3,
+    logger: Optional[logging.Logger] = None,
 ) -> str:
     """
     Call Gemini with exponential backoff retry logic for rate limiting.
-    
+
     Args:
         model: Gemini GenerativeModel instance
         content_parts: Content parts to send to the model
         max_retries: Maximum number of retry attempts
         logger: Optional logger instance
-        
+
     Returns:
         Generated text response or error message
     """
     for attempt in range(max_retries + 1):
         try:
             if logger:
-                logger.info(f"Calling Gemini API (attempt {attempt + 1}/{max_retries + 1})")
+                logger.info(
+                    f"Calling Gemini API (attempt {attempt + 1}/{max_retries + 1})"
+                )
             response = model.generate_content(content_parts)
             if logger:
                 logger.info("Successfully received response from Gemini API")
@@ -49,24 +51,24 @@ def call_gemini_with_retry(
 
 
 def organize_xai_files(
-    file_paths: List[str], 
-    root_dirs: Optional[List[str]] = None, 
-    logger: Optional[logging.Logger] = None
+    file_paths: List[str],
+    root_dirs: Optional[List[str]] = None,
+    logger: Optional[logging.Logger] = None,
 ) -> Dict[str, Dict[str, List[str]]]:
     """
     Organize files by XAI method name based on directory structure.
-    
+
     Args:
         file_paths: List of file paths (e.g., NPY or PNG files)
         root_dirs: List of root directories to search for methods
         logger: Optional logger instance
-        
+
     Returns:
         Dictionary mapping method names to their associated files
     """
     if root_dirs is None:
-        root_dirs = ['train', 'inference']
-        
+        root_dirs = ["train", "inference"]
+
     organized_files: Dict[str, Dict[str, List[str]]] = {}
     for file_path in file_paths:
         path_parts = file_path.split(os.sep)
@@ -93,11 +95,11 @@ def generate_method_explanation(
     config_files: List[str],
     system_prompt: str,
     model_name: str,
-    logger: Optional[logging.Logger] = None
+    logger: Optional[logging.Logger] = None,
 ) -> str:
     """
     Generate explanation for a specific XAI method with actual file content.
-    
+
     Args:
         method_name: Name of the XAI method
         method_files: Dictionary containing files for the method
@@ -106,30 +108,32 @@ def generate_method_explanation(
         system_prompt: System prompt for the LLM
         model_name: Name of the model to use
         logger: Optional logger instance
-        
+
     Returns:
         Generated explanation text
     """
     try:
-        import numpy as np
         import os
-        
+
+        import numpy as np
+
         # Build comprehensive content for the method
         content_parts = []
-        
+
         # Add system prompt
         content_parts.append(Part.from_text(system_prompt))
-        
+
         # Process files for this specific method
         file_analysis = []
-        method_file_list = method_files.get('files', [])
-        
+        method_file_list = method_files.get("files", [])
+
         for file_path in method_file_list:
             try:
-                if file_path.endswith('.npy'):
+                if file_path.endswith(".npy"):
                     # Load and analyze numpy array
                     data = np.load(file_path)
-                    file_analysis.append(f"""
+                    file_analysis.append(
+                        f"""
 ### {os.path.basename(file_path)}
 - **File Type**: NumPy Array (.npy)
 - **Shape**: {data.shape}
@@ -146,38 +150,46 @@ def generate_method_explanation(
 **Data Statistics:**
 - Non-zero elements: {np.count_nonzero(data)} / {data.size} ({100*np.count_nonzero(data)/data.size:.2f}%)
 - Unique values: {len(np.unique(data))}
-""")
-                    
-                elif file_path.endswith('.png'):
+"""
+                    )
+
+                elif file_path.endswith(".png"):
                     # Include image metadata (TODO: implement full image inclusion)
                     try:
                         from PIL import Image
+
                         image = Image.open(file_path)
-                        
-                        file_analysis.append(f"""
+
+                        file_analysis.append(
+                            f"""
 ### {os.path.basename(file_path)}
 - **File Type**: PNG Image
 - **Size**: {image.size}
 - **Mode**: {image.mode}
 - **File Path**: {file_path}
 - **Note**: Image content analysis available but not included in this API call
-""")
-                        
+"""
+                        )
+
                     except Exception as img_error:
-                        file_analysis.append(f"""
+                        file_analysis.append(
+                            f"""
 ### {os.path.basename(file_path)}
 - **File Type**: PNG Image (Error loading)
 - **Error**: {str(img_error)}
 - **File Path**: {file_path}
-""")
-                        
+"""
+                        )
+
             except Exception as file_error:
-                file_analysis.append(f"""
+                file_analysis.append(
+                    f"""
 ### {os.path.basename(file_path)}
 - **Error loading file**: {str(file_error)}
 - **File Path**: {file_path}
-""")
-        
+"""
+                )
+
         # Add method-specific context with actual file data
         method_context = f"""
 ## XAI Method Analysis: {method_name.upper()}
@@ -218,21 +230,23 @@ Please provide a comprehensive analysis of the **{method_name}** XAI method base
 
 Please structure your response as a detailed markdown report focused specifically on the {method_name} method.
 """
-        
+
         content_parts.append(Part.from_text(method_context))
-        
+
         if logger:
-            logger.info(f"Generating explanation for {method_name} with {len(method_file_list)} files")
-        
+            logger.info(
+                f"Generating explanation for {method_name} with {len(method_file_list)} files"
+            )
+
         # Create the model and generate explanation
         model = GenerativeModel(model_name)
         explanation = call_gemini_with_retry(model, content_parts, logger=logger)
-        
+
         if logger:
             logger.info(f"Generated explanation for {method_name}")
-        
+
         return explanation
-        
+
     except Exception as e:
         error_msg = f"[ERROR] Failed to generate explanation for {method_name}: {e}"
         if logger:

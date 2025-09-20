@@ -18,15 +18,16 @@ import gc
 import torch
 from omegaconf import OmegaConf
 from refrakt_core.api.utils.pipeline_utils import setup_logger_and_config
-from refrakt_cli.helpers.config_overrides import (
-    setup_logging_config, 
-    extract_runtime_config, 
-    apply_config_overrides, 
-    extract_overrides
-)
 
-from refrakt_cli.utils.cli_utils import setup_argument_parser
+from refrakt_cli.helpers.config_overrides import (
+    apply_config_overrides,
+    extract_overrides,
+    extract_runtime_config,
+    setup_logging_config,
+)
 from refrakt_cli.helpers.pipeline_manager import execute_pipeline_mode
+from refrakt_cli.utils.cli_utils import setup_argument_parser
+
 
 def main() -> None:
     """
@@ -66,7 +67,7 @@ def main() -> None:
         )
 
         debug = args.debug or debug
-        
+
         # Control console output based on debug flag
         # Always show console output for essential messages, but only show verbose debug messages when debug is enabled
         console_output = True  # Always enable console for essential messages
@@ -90,7 +91,9 @@ def main() -> None:
         logger.info("==> Refrakt CLI launched")
 
         try:
-            execute_pipeline_mode(mode, cfg, model_path or "", logger, config_path=args.config)
+            execute_pipeline_mode(
+                mode, cfg, model_path or "", logger, config_path=args.config
+            )
 
         except KeyboardInterrupt:
             logger.warning("Training interrupted by user")

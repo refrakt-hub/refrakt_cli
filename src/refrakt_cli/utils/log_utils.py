@@ -1,7 +1,8 @@
+import logging
 import os
 import time
-import logging
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
 
 def sort_log_files_by_time(log_files: List[str]) -> List[str]:
     """
@@ -24,6 +25,7 @@ def sort_log_files_by_time(log_files: List[str]) -> List[str]:
     log_files_with_time.sort(key=lambda x: x[1], reverse=True)
     return [log_file for log_file, _ in log_files_with_time]
 
+
 def _extract_accuracy(line: str) -> Optional[float]:
     """
     Extract accuracy value from a log line.
@@ -37,30 +39,31 @@ def _extract_accuracy(line: str) -> Optional[float]:
     try:
         # Check for various accuracy patterns
         patterns = [
-            'Model accuracy: ',
-            'model accuracy: ',
-            'Validation Accuracy: ',
-            'validation accuracy: ',
-            'accuracy: ',
-            'Accuracy: '
+            "Model accuracy: ",
+            "model accuracy: ",
+            "Validation Accuracy: ",
+            "validation accuracy: ",
+            "accuracy: ",
+            "Accuracy: ",
         ]
-        
+
         for pattern in patterns:
             if pattern in line:
                 # Extract the value after the pattern
                 value_part = line.split(pattern)[-1].strip()
                 # Handle percentage format (e.g., "97.30%")
-                if '%' in value_part:
-                    acc_val = float(value_part.split('%')[0]) / 100.0
+                if "%" in value_part:
+                    acc_val = float(value_part.split("%")[0]) / 100.0
                 else:
                     # Handle decimal format (e.g., "0.9730")
                     acc_val = float(value_part.split()[0])
-                
+
                 if 0.0 <= acc_val <= 1.0:
                     return acc_val
     except Exception:
         pass
     return None
+
 
 def _extract_loss(line: str) -> Optional[float]:
     """
@@ -75,18 +78,18 @@ def _extract_loss(line: str) -> Optional[float]:
     try:
         # Check for various loss patterns
         patterns = [
-            'Avg Loss: ',
-            'avg loss: ',
-            'Average Loss: ',
-            'average loss: ',
-            'Loss: ',
-            'loss: ',
-            'Validation Loss: ',
-            'validation loss: ',
-            'final_loss: ',
-            'Final Loss: '
+            "Avg Loss: ",
+            "avg loss: ",
+            "Average Loss: ",
+            "average loss: ",
+            "Loss: ",
+            "loss: ",
+            "Validation Loss: ",
+            "validation loss: ",
+            "final_loss: ",
+            "Final Loss: ",
         ]
-        
+
         for pattern in patterns:
             if pattern in line:
                 value_part = line.split(pattern)[-1].strip()
@@ -94,6 +97,7 @@ def _extract_loss(line: str) -> Optional[float]:
     except Exception:
         pass
     return None
+
 
 def _extract_epoch(line: str) -> Optional[int]:
     """
@@ -108,29 +112,30 @@ def _extract_epoch(line: str) -> Optional[int]:
     try:
         # Check for various epoch patterns
         import re
-        
+
         # Pattern 1: "Epoch [1/5]" or "Epoch 1/5"
-        match = re.search(r'Epoch\s*\[?(\d+)/(\d+)', line, re.IGNORECASE)
+        match = re.search(r"Epoch\s*\[?(\d+)/(\d+)", line, re.IGNORECASE)
         if match:
             current_epoch = int(match.group(1))
             total_epochs = int(match.group(2))
             return total_epochs  # Return total epochs completed
-        
+
         # Pattern 2: "epoch: 5" or "epochs_completed: 5"
         patterns = [
-            r'epochs_completed:\s*(\d+)',
-            r'epoch:\s*(\d+)',
-            r'Epoch\s+(\d+)\s+complete',
+            r"epochs_completed:\s*(\d+)",
+            r"epoch:\s*(\d+)",
+            r"Epoch\s+(\d+)\s+complete",
         ]
-        
+
         for pattern in patterns:
             match = re.search(pattern, line, re.IGNORECASE)
             if match:
                 return int(match.group(1))
-                
+
     except Exception:
         pass
     return None
+
 
 def _extract_training_time(lines: List[str]) -> Optional[float]:
     """
@@ -145,31 +150,44 @@ def _extract_training_time(lines: List[str]) -> Optional[float]:
     try:
         import re
         from datetime import datetime
-        
+
         start_time = None
         end_time = None
-        
+
         for line in lines:
             # Look for training start
-            if 'Training phase started' in line or 'Training started' in line:
-                timestamp_match = re.match(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})', line)
+            if "Training phase started" in line or "Training started" in line:
+                timestamp_match = re.match(
+                    r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})", line
+                )
                 if timestamp_match:
-                    start_time = datetime.strptime(timestamp_match.group(1).split(',')[0], '%Y-%m-%d %H:%M:%S')
-            
+                    start_time = datetime.strptime(
+                        timestamp_match.group(1).split(",")[0], "%Y-%m-%d %H:%M:%S"
+                    )
+
             # Look for training completion
-            elif 'Training completed successfully' in line or 'Training results:' in line:
-                timestamp_match = re.match(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})', line)
+            elif (
+                "Training completed successfully" in line or "Training results:" in line
+            ):
+                timestamp_match = re.match(
+                    r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})", line
+                )
                 if timestamp_match:
-                    end_time = datetime.strptime(timestamp_match.group(1).split(',')[0], '%Y-%m-%d %H:%M:%S')
-        
+                    end_time = datetime.strptime(
+                        timestamp_match.group(1).split(",")[0], "%Y-%m-%d %H:%M:%S"
+                    )
+
         if start_time and end_time:
             return (end_time - start_time).total_seconds()
-            
+
     except Exception:
         pass
     return None
 
-def extract_key_metrics_from_logs(log_files: List[str], logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
+
+def extract_key_metrics_from_logs(
+    log_files: List[str], logger: Optional[logging.Logger] = None
+) -> Dict[str, Any]:
     """
     Extract key performance metrics from log files.
 
@@ -184,32 +202,32 @@ def extract_key_metrics_from_logs(log_files: List[str], logger: Optional[logging
         "best_accuracy": "N/A",
         "final_loss": "N/A",
         "epochs_completed": "N/A",
-        "training_time": "N/A"
+        "training_time": "N/A",
     }
 
     for log_file in log_files:
         try:
-            with open(log_file, 'r') as f:
+            with open(log_file, "r") as f:
                 lines = f.readlines()
 
             # Extract accuracy from individual lines
             for line in lines:
                 acc_val = _extract_accuracy(line)
                 if acc_val is not None:
-                    metrics['best_accuracy'] = str(acc_val)
+                    metrics["best_accuracy"] = str(acc_val)
 
                 loss_val = _extract_loss(line)
                 if loss_val is not None:
-                    metrics['final_loss'] = str(loss_val)
+                    metrics["final_loss"] = str(loss_val)
 
                 epoch_val = _extract_epoch(line)
                 if epoch_val is not None:
-                    metrics['epochs_completed'] = str(epoch_val)
+                    metrics["epochs_completed"] = str(epoch_val)
 
             # Extract training time from all lines
             training_time = _extract_training_time(lines)
             if training_time is not None:
-                metrics['training_time'] = str(round(training_time, 2))
+                metrics["training_time"] = str(round(training_time, 2))
 
         except Exception as e:
             if logger:
@@ -217,7 +235,12 @@ def extract_key_metrics_from_logs(log_files: List[str], logger: Optional[logging
 
     return metrics
 
-def filter_recent_logs(log_files: List[str], max_age_seconds: int = 86400, logger: Optional[logging.Logger] = None) -> List[str]:
+
+def filter_recent_logs(
+    log_files: List[str],
+    max_age_seconds: int = 86400,
+    logger: Optional[logging.Logger] = None,
+) -> List[str]:
     """
     Filter log files to include only those modified within a certain time frame.
 

@@ -45,5 +45,8 @@ dev = [
     "isort"
 ]
 
+[tool.isort]
+profile = "black"
+
 # To update dev dependencies, edit this section and run:
 #   pip install -e .[dev]

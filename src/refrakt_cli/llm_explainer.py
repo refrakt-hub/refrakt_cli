@@ -1,36 +1,65 @@
-import os
-import time
-import random
 import logging
+import os
+import random
+import time
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass
 
 from vertexai.generative_models import GenerativeModel, Part
-from refrakt_cli.utils.retry_utils import get_retry_parameters
-from refrakt_cli.helpers.metadata_helpers import extract_model_metadata, extract_dataset_metadata
-from refrakt_cli.utils.log_utils import sort_log_files_by_time, extract_key_metrics_from_logs
-from refrakt_cli.utils.gemini_utils import build_system_prompt, add_images_to_content
-from refrakt_cli.utils.explanation_utils import extract_metadata_context, extract_file_context
-from refrakt_cli.helpers.llm_helpers import find_latest_experiment_dir, generate_and_save_explanations, setup_llm_environment
 
-def _retry_logic(attempt: int, max_retries: int, base_delay: float, logger: Optional[logging.Logger] = None) -> None:
+from refrakt_cli.helpers.llm_helpers import (
+    find_latest_experiment_dir,
+    generate_and_save_explanations,
+    setup_llm_environment,
+)
+from refrakt_cli.helpers.metadata_helpers import (
+    extract_dataset_metadata,
+    extract_model_metadata,
+)
+from refrakt_cli.utils.explanation_utils import (
+    extract_file_context,
+    extract_metadata_context,
+)
+from refrakt_cli.utils.gemini_utils import add_images_to_content, build_system_prompt
+from refrakt_cli.utils.log_utils import (
+    extract_key_metrics_from_logs,
+    sort_log_files_by_time,
+)
+from refrakt_cli.utils.retry_utils import get_retry_parameters
+
+
+def _retry_logic(
+    attempt: int,
+    max_retries: int,
+    base_delay: float,
+    logger: Optional[logging.Logger] = None,
+) -> None:
     """Handle retry logic for API calls."""
     if logger:
-        logger.warning(f"Retrying after {base_delay} seconds (attempt {attempt + 1}/{max_retries + 1})")
-    time.sleep(base_delay * (2 ** attempt) + random.uniform(0, 1))
+        logger.warning(
+            f"Retrying after {base_delay} seconds (attempt {attempt + 1}/{max_retries + 1})"
+        )
+    time.sleep(base_delay * (2**attempt) + random.uniform(0, 1))
+
 
 def _handle_api_error(e: Exception, logger: Optional[logging.Logger] = None) -> str:
     """Handle API errors and return appropriate error messages."""
     error_msg = str(e).lower()
-    if "429" in error_msg or "resource exhausted" in error_msg or "quota exceeded" in error_msg:
+    if (
+        "429" in error_msg
+        or "resource exhausted" in error_msg
+        or "quota exceeded" in error_msg
+    ):
         return "RATE_LIMIT_ERROR"
     return "GENERIC_ERROR"
+
 
 def run_llm_explanations(logger: Optional[logging.Logger] = None) -> None:
     """
@@ -54,7 +83,14 @@ def run_llm_explanations(logger: Optional[logging.Logger] = None) -> None:
         if logger:
             logger.error(f"Failed to process experiment directory {exp_dir}: {e}")
 
-def build_gemini_content(metadata: Dict[str, Any], npy_files: List[str], png_files: List[str], config_files: List[str], logger: Optional[logging.Logger] = None) -> List[Part]:
+
+def build_gemini_content(
+    metadata: Dict[str, Any],
+    npy_files: List[str],
+    png_files: List[str],
+    config_files: List[str],
+    logger: Optional[logging.Logger] = None,
+) -> List[Part]:
     """
     Build structured content for Gemini API using the multimodal approach.
     """
@@ -76,7 +112,12 @@ def build_gemini_content(metadata: Dict[str, Any], npy_files: List[str], png_fil
     return content_parts
 
 
-def build_structured_context(metadata: Dict[str, Any], npy_files: List[str], png_files: List[str], config_files: List[str]) -> str:
+def build_structured_context(
+    metadata: Dict[str, Any],
+    npy_files: List[str],
+    png_files: List[str],
+    config_files: List[str],
+) -> str:
     """
     Build a structured context string from metadata and file lists.
     """
@@ -89,18 +130,31 @@ def build_structured_context(metadata: Dict[str, Any], npy_files: List[str], png
     # Combine metadata and file context
     return f"{metadata_context}\n\n{file_context}"
 
-def extract_experiment_metadata(exp_dir: str, logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
+
+def extract_experiment_metadata(
+    exp_dir: str, logger: Optional[logging.Logger] = None
+) -> Dict[str, Any]:
     """Extract metadata from experiment directory."""
     metadata = {
         "experiment_dir": exp_dir,
-        "model_name": os.path.basename(exp_dir).split('_')[0] if '_' in os.path.basename(exp_dir) else "unknown",
-        "experiment_id": os.path.basename(exp_dir).split('_', 1)[1] if '_' in os.path.basename(exp_dir) else "unknown",
-        "has_train": os.path.exists(os.path.join(exp_dir, 'train')),
-        "has_inference": os.path.exists(os.path.join(exp_dir, 'inference')),
+        "model_name": (
+            os.path.basename(exp_dir).split("_")[0]
+            if "_" in os.path.basename(exp_dir)
+            else "unknown"
+        ),
+        "experiment_id": (
+            os.path.basename(exp_dir).split("_", 1)[1]
+            if "_" in os.path.basename(exp_dir)
+            else "unknown"
+        ),
+        "has_train": os.path.exists(os.path.join(exp_dir, "train")),
+        "has_inference": os.path.exists(os.path.join(exp_dir, "inference")),
     }
 
     if logger:
-        logger.info(f"Extracting metadata for experiment: {metadata['model_name']}_{metadata['experiment_id']}")
+        logger.info(
+            f"Extracting metadata for experiment: {metadata['model_name']}_{metadata['experiment_id']}"
+        )
 
     # Extract model metadata
     model_metadata = extract_model_metadata(exp_dir, logger)
@@ -113,23 +167,30 @@ def extract_experiment_metadata(exp_dir: str, logger: Optional[logging.Logger] =
     return metadata
 
 
-def generate_method_explanation_simple(exp_dir: str, method_name: str, metadata: Dict[str, Any], logger: Optional[logging.Logger] = None) -> str:
+def generate_method_explanation_simple(
+    exp_dir: str,
+    method_name: str,
+    metadata: Dict[str, Any],
+    logger: Optional[logging.Logger] = None,
+) -> str:
     """Generate a simple explanation for a method based on available files."""
-    train_dir = os.path.join(exp_dir, 'train', method_name)
-    inference_dir = os.path.join(exp_dir, 'inference', method_name)
-    
+    train_dir = os.path.join(exp_dir, "train", method_name)
+    inference_dir = os.path.join(exp_dir, "inference", method_name)
+
     explanation_parts = []
     explanation_parts.append(f"## {method_name.upper()} Analysis")
-    
+
     if os.path.exists(train_dir):
         train_files = os.listdir(train_dir)
         explanation_parts.append(f"Training files found: {len(train_files)}")
-    
+
     if os.path.exists(inference_dir):
         inference_files = os.listdir(inference_dir)
         explanation_parts.append(f"Inference files found: {len(inference_files)}")
-    
+
     explanation_parts.append(f"Model: {metadata.get('model_name', 'unknown')}")
-    explanation_parts.append(f"Experiment ID: {metadata.get('experiment_id', 'unknown')}")
-    
+    explanation_parts.append(
+        f"Experiment ID: {metadata.get('experiment_id', 'unknown')}"
+    )
+
     return "\n".join(explanation_parts)
