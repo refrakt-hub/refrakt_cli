@@ -31,7 +31,9 @@ def _handle_post_pipeline_llm(cfg: DictConfig, logger: Optional[RefraktLogger]) 
     from omegaconf import OmegaConf
     from refrakt_core.api.utils.pipeline_utils import parse_runtime_hooks
     from refrakt_core.error_handling import XAINotSupportedError
+
     from refrakt_cli.llm_explainer import run_llm_explanations
+
     try:
         cfg_dict = _get_cfg_dict(cfg, OmegaConf)
         _, _, explain_flag = parse_runtime_hooks(cfg_dict)  # type: ignore
@@ -46,11 +48,13 @@ def _handle_post_pipeline_llm(cfg: DictConfig, logger: Optional[RefraktLogger]) 
     except Exception as e:
         _handle_llm_explainer_exception(logger, e)
 
+
 def _get_cfg_dict(cfg, OmegaConf):
     cfg_dict = OmegaConf.to_container(cfg, resolve=True)
     if not isinstance(cfg_dict, dict):
         cfg_dict = {}
     return dict(cfg_dict)
+
 
 def _is_contrastive_model(cfg_dict):
     model_name = cfg_dict.get("model", {}).get("name", "").lower()
@@ -58,11 +62,10 @@ def _is_contrastive_model(cfg_dict):
     wrapper_name = cfg_dict.get("model", {}).get("wrapper", "").lower()
     contrastive_indicators = ["simclr", "dino", "msn", "contrastive"]
     return any(
-        indicator in model_name
-        or indicator in model_type
-        or indicator in wrapper_name
+        indicator in model_name or indicator in model_type or indicator in wrapper_name
         for indicator in contrastive_indicators
     )
+
 
 def _log_contrastive_warning(logger):
     if logger:
@@ -72,15 +75,18 @@ def _log_contrastive_warning(logger):
             "Skipping LLM explainer for contrastive model."
         )
 
+
 def _trigger_llm_explainer(logger, run_llm_explanations):
     if logger:
         logger.info("... triggering the llm explainer (post-pipeline)")
     run_llm_explanations(logger=getattr(logger, "logger", None))
 
+
 def _handle_xai_not_supported(logger, e):
     if logger:
         logger.warning(f"XAI not supported for contrastive models: {e}")
         logger.info("Skipping LLM explainer for contrastive model")
+
 
 def _handle_llm_explainer_exception(logger, e):
     if logger:

@@ -36,8 +36,10 @@ def create_experiment_info(
     return result
 
 
-def _extract_training_results_dict(training_results: Optional[Any]) -> Dict[str, Any]:
-    """Extract a dictionary from training_results, handling summary/callable/dict/None."""
+def _extract_training_results_dict(
+    training_results: Optional[Any],
+) -> Dict[str, Any]:
+    """Extract dict from training_results, handling summary/callable/dict/None."""
     if training_results is None:
         return {}
     if (
@@ -93,21 +95,21 @@ def _collect_explanation_files(explanations_dir: str) -> Tuple[List[str], List[s
 
 
 def _filter_files_by_experiment_id(files: List[str], experiment_id: str) -> List[str]:
-    """Filter files to those under train/inference for the given experiment_id and return relative paths."""
+    """Filter files to train/inference for experiment_id, return relative paths."""
     # Handle different experiment ID formats found in the file paths
     experiment_patterns = [
         f"{experiment_id}/train/",  # Direct format: 184818/train/
         f"{experiment_id}/inference/",  # Direct format: 184818/inference/
-        f"convnext_{experiment_id}/train/",  # Full format: convnext_184818/train/
-        f"convnext_{experiment_id}/inference/",  # Full format: convnext_184818/inference/
+        f"convnext_{experiment_id}/train/",  # Full: convnext_184818/train/
+        f"convnext_{experiment_id}/inference/",  # Full: convnext_184818/inference/
     ]
 
     filtered_files = []
     for file in files:
         for pattern in experiment_patterns:
             if pattern in file:
-                # Extract just the method directory and filename (e.g., "layer_gradcam/sample_1.png")
-                # from full path like "convnext_20250814_220650/train/layer_gradcam/sample_1.png"
+                # Extract method dir and filename (e.g., "layer_gradcam/sample_1.png")
+                # from full path like "convnext_20250814_220650/train/..."
                 parts = file.split(pattern, 1)
                 if len(parts) == 2:
                     relative_path = parts[
@@ -120,9 +122,11 @@ def _filter_files_by_experiment_id(files: List[str], experiment_id: str) -> List
 
 
 def collect_run_metadata(
-    checkpoints_dir: str, experiment_id: str, logger: Optional[logging.Logger] = None
+    checkpoints_dir: str,
+    experiment_id: str,
+    logger: Optional[logging.Logger] = None,
 ) -> Dict[str, Any]:
-    """Collect run metadata including NPY and PNG files from explanations directories."""
+    """Collect run metadata including NPY and PNG files from explanations dirs."""
     # First, try the local explanations directory (within checkpoints)
     explanations_dir = os.path.join(checkpoints_dir, "explanations")
     npy_files, png_files = _collect_explanation_files(explanations_dir)
@@ -140,7 +144,8 @@ def collect_run_metadata(
 
     if logger:
         logger.debug(
-            f"[DEBUG] Found {len(filtered_npy)} NPY files and {len(filtered_png)} PNG files for experiment {experiment_id}"
+            f"[DEBUG] Found {len(filtered_npy)} NPY files and "
+            f"{len(filtered_png)} PNG files for experiment {experiment_id}"
         )
         logger.debug(f"[DEBUG] NPY files: {filtered_npy}")
         logger.debug(f"[DEBUG] PNG files: {filtered_png}")

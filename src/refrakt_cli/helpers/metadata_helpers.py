@@ -532,10 +532,13 @@ def _extract_xai_viz_info(config_data: Dict[str, Any]) -> Tuple[Any, ...]:
     if "runtime" in config_data and "hooks" in config_data["runtime"]:
         hooks = config_data["runtime"]["hooks"]
         explainability_configs = hooks.get("explainability", [])
-        xai_methods, method_configs, layer_info = _extract_xai_methods_and_configs(explainability_configs)
+        xai_methods, method_configs, layer_info = _extract_xai_methods_and_configs(
+            explainability_configs
+        )
         xai_info = _build_xai_info(xai_methods, method_configs, layer_info, hooks)
         viz_info = _build_viz_info(hooks)
     return xai_info, viz_info
+
 
 def _extract_xai_methods_and_configs(explainability_configs):
     xai_methods = []
@@ -556,6 +559,7 @@ def _extract_xai_methods_and_configs(explainability_configs):
             xai_methods.append(config)
     return xai_methods, method_configs, layer_info
 
+
 def _build_xai_info(xai_methods, method_configs, layer_info, hooks):
     xai_info = {"methods": xai_methods, "explain_flag": hooks.get("explain", False)}
     if method_configs:
@@ -563,6 +567,7 @@ def _build_xai_info(xai_methods, method_configs, layer_info, hooks):
     if layer_info:
         xai_info["layer_info"] = layer_info
     return xai_info
+
 
 def _build_viz_info(hooks):
     return {"methods": hooks.get("visualizations", [])}

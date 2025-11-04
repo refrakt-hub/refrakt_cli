@@ -21,7 +21,8 @@ def initialize_vertex_ai(logger: Optional[logging.Logger] = None) -> None:
         vertexai.init(project=PROJECT_ID, location=LOCATION)
         if logger:
             logger.info(
-                f"Initialized Vertex AI with project: {PROJECT_ID}, location: {LOCATION}"
+                f"Initialized Vertex AI with project: {PROJECT_ID}, "
+                f"location: {LOCATION}"
             )
     except Exception as e:
         if logger:

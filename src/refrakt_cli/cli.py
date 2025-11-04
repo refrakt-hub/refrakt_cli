@@ -69,7 +69,8 @@ def main() -> None:
         debug = args.debug or debug
 
         # Control console output based on debug flag
-        # Always show console output for essential messages, but only show verbose debug messages when debug is enabled
+        # Always show console output for essential messages, but only show
+        # verbose debug messages when debug is enabled
         console_output = True  # Always enable console for essential messages
 
         # Ensure model_name includes variant for autoencoders

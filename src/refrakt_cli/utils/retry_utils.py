@@ -39,12 +39,12 @@ def handle_rate_limit_error(
         None
     """
     wait_time = (base_delay * (2**attempt)) + random.uniform(0, 2)
+    msg = (
+        f"Rate limit hit (attempt {attempt + 1}/{max_retries + 1}). "
+        f"Waiting {wait_time:.2f}s before retry..."
+    )
     if logger:
-        logger.warning(
-            f"Rate limit hit (attempt {attempt + 1}/{max_retries + 1}). Waiting {wait_time:.2f}s before retry..."
-        )
+        logger.warning(msg)
     else:
-        print(
-            f"Rate limit hit (attempt {attempt + 1}/{max_retries + 1}). Waiting {wait_time:.2f}s before retry..."
-        )
+        print(msg)
     time.sleep(wait_time)

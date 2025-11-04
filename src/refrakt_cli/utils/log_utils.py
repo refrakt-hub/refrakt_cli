@@ -1,7 +1,12 @@
+from __future__ import annotations
+
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 def sort_log_files_by_time(log_files: List[str]) -> List[str]:
@@ -116,7 +121,7 @@ def _extract_epoch(line: str) -> Optional[int]:
         # Pattern 1: "Epoch [1/5]" or "Epoch 1/5"
         match = re.search(r"Epoch\s*\[?(\d+)/(\d+)", line, re.IGNORECASE)
         if match:
-            current_epoch = int(match.group(1))
+            _ = int(match.group(1))  # current_epoch (not used)
             total_epochs = int(match.group(2))
             return total_epochs  # Return total epochs completed
 
@@ -137,6 +142,56 @@ def _extract_epoch(line: str) -> Optional[int]:
     return None
 
 
+def _extract_timestamp_from_line(line: str) -> Optional[datetime]:
+    """
+    Extract timestamp from a log line if present.
+
+    Args:
+        line: Log line to parse
+
+    Returns:
+        datetime object if timestamp found, None otherwise
+    """
+    import re
+    from datetime import datetime
+
+    timestamp_match = re.match(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})", line)
+    if timestamp_match:
+        try:
+            return datetime.strptime(
+                timestamp_match.group(1).split(",")[0], "%Y-%m-%d %H:%M:%S"
+            )
+        except (ValueError, AttributeError):
+            return None
+    return None
+
+
+def _is_training_start_line(line: str) -> bool:
+    """
+    Check if a log line indicates training start.
+
+    Args:
+        line: Log line to check
+
+    Returns:
+        True if line indicates training start, False otherwise
+    """
+    return "Training phase started" in line or "Training started" in line
+
+
+def _is_training_end_line(line: str) -> bool:
+    """
+    Check if a log line indicates training completion.
+
+    Args:
+        line: Log line to check
+
+    Returns:
+        True if line indicates training completion, False otherwise
+    """
+    return "Training completed successfully" in line or "Training results:" in line
+
+
 def _extract_training_time(lines: List[str]) -> Optional[float]:
     """
     Extract training time by calculating time difference between start and end.
@@ -148,34 +203,18 @@ def _extract_training_time(lines: List[str]) -> Optional[float]:
         Training time in seconds or None if not found
     """
     try:
-        import re
-        from datetime import datetime
-
         start_time = None
         end_time = None
 
         for line in lines:
-            # Look for training start
-            if "Training phase started" in line or "Training started" in line:
-                timestamp_match = re.match(
-                    r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})", line
-                )
-                if timestamp_match:
-                    start_time = datetime.strptime(
-                        timestamp_match.group(1).split(",")[0], "%Y-%m-%d %H:%M:%S"
-                    )
-
-            # Look for training completion
-            elif (
-                "Training completed successfully" in line or "Training results:" in line
-            ):
-                timestamp_match = re.match(
-                    r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})", line
-                )
-                if timestamp_match:
-                    end_time = datetime.strptime(
-                        timestamp_match.group(1).split(",")[0], "%Y-%m-%d %H:%M:%S"
-                    )
+            if _is_training_start_line(line):
+                timestamp = _extract_timestamp_from_line(line)
+                if timestamp:
+                    start_time = timestamp
+            elif _is_training_end_line(line):
+                timestamp = _extract_timestamp_from_line(line)
+                if timestamp:
+                    end_time = timestamp
 
         if start_time and end_time:
             return (end_time - start_time).total_seconds()

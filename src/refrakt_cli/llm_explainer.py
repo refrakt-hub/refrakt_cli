@@ -2,8 +2,7 @@ import logging
 import os
 import random
 import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 try:
     from dotenv import load_dotenv
@@ -12,7 +11,7 @@ try:
 except ImportError:
     pass
 
-from vertexai.generative_models import GenerativeModel, Part
+from vertexai.generative_models import Part
 
 from refrakt_cli.helpers.llm_helpers import (
     find_latest_experiment_dir,
@@ -28,11 +27,6 @@ from refrakt_cli.utils.explanation_utils import (
     extract_metadata_context,
 )
 from refrakt_cli.utils.gemini_utils import add_images_to_content, build_system_prompt
-from refrakt_cli.utils.log_utils import (
-    extract_key_metrics_from_logs,
-    sort_log_files_by_time,
-)
-from refrakt_cli.utils.retry_utils import get_retry_parameters
 
 
 def _retry_logic(
@@ -44,7 +38,8 @@ def _retry_logic(
     """Handle retry logic for API calls."""
     if logger:
         logger.warning(
-            f"Retrying after {base_delay} seconds (attempt {attempt + 1}/{max_retries + 1})"
+            f"Retrying after {base_delay} seconds "
+            f"(attempt {attempt + 1}/{max_retries + 1})"
         )
     time.sleep(base_delay * (2**attempt) + random.uniform(0, 1))
 
@@ -63,8 +58,9 @@ def _handle_api_error(e: Exception, logger: Optional[logging.Logger] = None) -> 
 
 def run_llm_explanations(logger: Optional[logging.Logger] = None) -> None:
     """
-    Generate LLM explanations for each XAI component separately, then combine them into a comprehensive explanation.
-    This function handles multiple XAI methods by organizing files by method and generating explanations for each.
+    Generate LLM explanations for each XAI component separately, then combine
+    them into a comprehensive explanation. This function handles multiple XAI
+    methods by organizing files by method and generating explanations for each.
     """
     explanations_dir = setup_llm_environment(logger)
     if not explanations_dir:
@@ -152,9 +148,8 @@ def extract_experiment_metadata(
     }
 
     if logger:
-        logger.info(
-            f"Extracting metadata for experiment: {metadata['model_name']}_{metadata['experiment_id']}"
-        )
+        exp_name = f"{metadata['model_name']}_{metadata['experiment_id']}"
+        logger.info(f"Extracting metadata for experiment: {exp_name}")
 
     # Extract model metadata
     model_metadata = extract_model_metadata(exp_dir, logger)

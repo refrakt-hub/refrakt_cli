@@ -52,9 +52,17 @@ def build_system_prompt(logger: Optional[logging.Logger] = None) -> str:
     if prompt_file_path is None:
         if logger:
             logger.warning(
-                "System prompt file not found in any of the expected locations, using default prompt"
+                "System prompt file not found in any of the expected "
+                "locations, using default prompt"
             )
-        return "You are an expert AI explainer for deep learning models specializing in Explainable AI (XAI) analysis. Your task is to generate comprehensive, accurate, and insightful natural language explanations for model behavior using the provided XAI visualizations, attribution data, and model metadata."
+        default_prompt = (
+            "You are an expert AI explainer for deep learning models "
+            "specializing in Explainable AI (XAI) analysis. Your task is to "
+            "generate comprehensive, accurate, and insightful natural language "
+            "explanations for model behavior using the provided XAI "
+            "visualizations, attribution data, and model metadata."
+        )
+        return default_prompt
 
     try:
         with open(prompt_file_path, "r", encoding="utf-8") as f:
@@ -65,7 +73,14 @@ def build_system_prompt(logger: Optional[logging.Logger] = None) -> str:
     except Exception as e:
         if logger:
             logger.error(f"Error loading system prompt from {prompt_file_path}: {e}")
-        return "You are an expert AI explainer for deep learning models specializing in Explainable AI (XAI) analysis. Your task is to generate comprehensive, accurate, and insightful natural language explanations for model behavior using the provided XAI visualizations, attribution data, and model metadata."
+        default_prompt = (
+            "You are an expert AI explainer for deep learning models "
+            "specializing in Explainable AI (XAI) analysis. Your task is to "
+            "generate comprehensive, accurate, and insightful natural language "
+            "explanations for model behavior using the provided XAI "
+            "visualizations, attribution data, and model metadata."
+        )
+        return default_prompt
 
 
 def add_images_to_content(

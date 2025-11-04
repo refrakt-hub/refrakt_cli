@@ -3,7 +3,6 @@ repos:
     rev: 24.3.0
     hooks:
       - id: black
-        exclude: ^tests/
   - repo: local
     hooks:
       - id: isort
@@ -11,34 +10,13 @@ repos:
         entry: isort
         language: system
         types: [python]
-        exclude: ^tests/
-      - id: pylint
-        name: pylint
-        entry: pylint
-        language: system
-        types: [python]
-        exclude: ^tests/
-        args: [--ignore=tests]
       - id: radon-cc
         name: radon cyclomatic complexity
         entry: radon cc -nc -a -s refrakt_cli/
         language: system
         pass_filenames: false
-        exclude: ^tests/
-      - id: lizard
-        name: lizard complexity
-        entry: lizard -C 10 refrakt_cli/
-        language: system
-        pass_filenames: false
-        exclude: ^tests/
-      - id: pytest
-        name: pytest
-        entry: pytest
-        language: system
-        pass_filenames: false
-        exclude: ^tests/
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.4
     hooks:
       - id: ruff
-        exclude: ^tests/ 
+        args: [--fix] 

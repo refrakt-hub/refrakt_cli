@@ -36,26 +36,40 @@ def extract_comprehensive_metadata(
     Implements smart merging to preserve good metrics from previous phases.
     """
     _log_metadata_call(logger, training_results)
-    summary_metrics_path = os.path.join(checkpoints_dir, "explanations", "summary_metrics.json")
+    summary_metrics_path = os.path.join(
+        checkpoints_dir, "explanations", "summary_metrics.json"
+    )
     existing_metadata = _load_existing_summary_metrics(summary_metrics_path, logger)
     experiment_metadata = extract_experiment_metadata_helper(checkpoints_dir, logger)
     has_train, has_inference = determine_train_inference(config_files)
-    metadata = initialize_metadata_structure(experiment_metadata, has_train, has_inference)
-    metadata["experiment_info"] = create_experiment_info(experiment_metadata, has_train, has_inference)
+    metadata = initialize_metadata_structure(
+        experiment_metadata, has_train, has_inference
+    )
+    metadata["experiment_info"] = create_experiment_info(
+        experiment_metadata, has_train, has_inference
+    )
     experiment_id = metadata["experiment_info"]["experiment_id"]
     config_data = load_config_files(config_files, logger)
-    new_performance_metrics = merge_performance_metrics(base_dir, training_results, logger)
+    new_performance_metrics = merge_performance_metrics(
+        base_dir, training_results, logger
+    )
     if existing_metadata and existing_metadata.get("performance_metrics"):
-        metadata["performance_metrics"] = _merge_performance_metrics(existing_metadata["performance_metrics"], new_performance_metrics, logger)
+        metadata["performance_metrics"] = _merge_performance_metrics(
+            existing_metadata["performance_metrics"], new_performance_metrics, logger
+        )
     else:
         metadata["performance_metrics"] = new_performance_metrics
     if config_data:
         config_metadata = extract_metadata_from_config(config_data)
         if existing_metadata:
-            metadata = _merge_config_metadata(metadata, config_metadata, existing_metadata)
+            metadata = _merge_config_metadata(
+                metadata, config_metadata, existing_metadata
+            )
         else:
             metadata.update(config_metadata)
-    metadata["run_metadata"] = collect_run_metadata(checkpoints_dir, experiment_id, logger)
+    metadata["run_metadata"] = collect_run_metadata(
+        checkpoints_dir, experiment_id, logger
+    )
     _log_run_metadata_files(metadata, logger)
     runtime_xai_info = collect_runtime_xai_info(checkpoints_dir, logger)
     metadata = _update_runtime_xai_info(metadata, runtime_xai_info)
@@ -65,12 +79,14 @@ def extract_comprehensive_metadata(
         raise TypeError("metadata must be a dict[str, Any]")
     return metadata
 
+
 def _log_metadata_call(logger, training_results):
     if logger:
         logger.info(
             "extract_comprehensive_metadata called with training_results: "
             f"{training_results}"
         )
+
 
 def _load_existing_summary_metrics(summary_metrics_path, logger):
     existing_metadata = None
@@ -79,11 +95,14 @@ def _load_existing_summary_metrics(summary_metrics_path, logger):
             with open(summary_metrics_path, "r") as f:
                 existing_metadata = json.load(f)
                 if logger:
-                    logger.debug("[DEBUG] Found existing metadata, preserving good values")
+                    logger.debug(
+                        "[DEBUG] Found existing metadata, preserving good values"
+                    )
         except Exception as e:
             if logger:
                 logger.warning(f"Could not read existing summary_metrics.json: {e}")
     return existing_metadata
+
 
 def _merge_performance_metrics(existing_perf, new_perf, logger):
     merged_perf = {}
@@ -99,6 +118,7 @@ def _merge_performance_metrics(existing_perf, new_perf, logger):
         logger.debug(f"[DEBUG] Merged performance metrics: {merged_perf}")
     return merged_perf
 
+
 def _merge_config_metadata(metadata, config_metadata, existing_metadata):
     for key in ["model_info", "training_info", "dataset_info", "xai_info", "viz_info"]:
         if key in config_metadata:
@@ -110,10 +130,16 @@ def _merge_config_metadata(metadata, config_metadata, existing_metadata):
             metadata[key] = existing_metadata[key]
     return metadata
 
+
 def _log_run_metadata_files(metadata, logger):
     if logger:
-        logger.debug(f"[DEBUG] run_metadata.npy_files: {metadata['run_metadata']['npy_files']}")
-        logger.debug(f"[DEBUG] run_metadata.png_files: {metadata['run_metadata']['png_files']}")
+        logger.debug(
+            f"[DEBUG] run_metadata.npy_files: {metadata['run_metadata']['npy_files']}"
+        )
+        logger.debug(
+            f"[DEBUG] run_metadata.png_files: {metadata['run_metadata']['png_files']}"
+        )
+
 
 def _update_runtime_xai_info(metadata, runtime_xai_info):
     if runtime_xai_info and "xai_info" in metadata:
@@ -127,10 +153,12 @@ def _update_runtime_xai_info(metadata, runtime_xai_info):
         metadata["xai_info"]["runtime_info"] = runtime_xai_info
     return metadata
 
+
 def _cleanup_metadata_keys(metadata):
     if "config_files" in metadata["run_metadata"]:
         del metadata["run_metadata"]["config_files"]
     return metadata
+
 
 def _log_about_to_write_summary(metadata, logger):
     if logger:
@@ -191,7 +219,9 @@ def save_runtime_xai_info(
             "method": method_name,
             "config_params": params,
         }
-        runtime_info = _collect_layer_info(xai_instance, method_name, logger, runtime_info)
+        runtime_info = _collect_layer_info(
+            xai_instance, method_name, logger, runtime_info
+        )
         runtime_info = _get_resolved_layer_type(xai_instance, runtime_info)
         explanations_dir = os.path.join(base_dir, "explanations")
         os.makedirs(explanations_dir, exist_ok=True)
@@ -205,6 +235,7 @@ def save_runtime_xai_info(
         if logger:
             logger.warning(f"Failed to save runtime XAI info for {method_name}: {e}")
 
+
 def _collect_layer_info(xai_instance, method_name, logger, runtime_info):
     if hasattr(xai_instance, "get_target_layer_info"):
         try:
@@ -216,10 +247,12 @@ def _collect_layer_info(xai_instance, method_name, logger, runtime_info):
                 logger.warning(f"Failed to get layer info for {method_name}: {e}")
     return runtime_info
 
+
 def _get_resolved_layer_type(xai_instance, runtime_info):
     if hasattr(xai_instance, "layer") and xai_instance.layer is not None:
         runtime_info["resolved_layer_type"] = type(xai_instance.layer).__name__
     return runtime_info
+
 
 def _load_existing_runtime_info(runtime_file):
     existing_info = {}
@@ -231,11 +264,13 @@ def _load_existing_runtime_info(runtime_file):
             existing_info = {}
     return existing_info
 
+
 def _update_runtime_info(existing_info, method_name, runtime_info):
     if "methods" not in existing_info:
         existing_info["methods"] = {}
     existing_info["methods"][method_name] = runtime_info
     return existing_info
+
 
 def _save_runtime_info(runtime_file, existing_info):
     with open(runtime_file, "w") as f:

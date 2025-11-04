@@ -3,11 +3,15 @@ from typing import Any, Dict, List, Optional
 
 
 def format_header(metadata: Dict[str, Any], methods: List[str]) -> List[str]:
+    model_info = metadata.get("model_info", {})
+    model_name = model_info.get("name", "unknown")
+    model_type = model_info.get("type", "unknown")
     return [
         "# Comprehensive XAI Analysis",
-        "This report provides explanations for all XAI methods used in this experiment.\n",
+        "This report provides explanations for all XAI methods used in "
+        "this experiment.\n",
         "## Experiment Summary",
-        f"- **Model**: {metadata.get('model_info', {}).get('name', 'unknown')} ({metadata.get('model_info', {}).get('type', 'unknown')})",
+        f"- **Model**: {model_name} ({model_type})",
         f"- **Dataset**: {metadata.get('dataset_info', {}).get('name', 'unknown')}",
         f"- **XAI Methods**: {', '.join(methods)}",
         "",
@@ -21,8 +25,11 @@ def format_method_section(method_name: str, explanation: str) -> List[str]:
 def format_summary() -> List[str]:
     return [
         "## Summary",
-        "This analysis provides insights from multiple XAI methods, each offering a different perspective on the model's decision-making process.",
-        "Individual explanations for each method have been saved as separate files for detailed review.",
+        "This analysis provides insights from multiple XAI methods, each "
+        "offering a different perspective on the model's decision-making "
+        "process.",
+        "Individual explanations for each method have been saved as separate "
+        "files for detailed review.",
     ]
 
 
