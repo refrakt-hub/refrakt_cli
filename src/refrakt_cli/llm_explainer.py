@@ -5,9 +5,27 @@ import time
 from typing import Any, Dict, List, Optional
 
 try:
+    from pathlib import Path
+
     from dotenv import load_dotenv
 
-    load_dotenv()
+    # dev.env is always in the project root directory
+    # Find project root by going up from this file location
+    # File is at: src/refrakt_cli/src/refrakt_cli/llm_explainer.py
+    # Root is 5 levels up
+    project_root = Path(__file__).parent.parent.parent.parent.parent
+    dev_env_path = project_root / "dev.env"
+
+    if dev_env_path.exists():
+        load_dotenv(dev_env_path)
+    else:
+        # Fallback: try current working directory (if running from root)
+        cwd_env = Path.cwd() / "dev.env"
+        if cwd_env.exists():
+            load_dotenv(cwd_env)
+        else:
+            # Last resort: default .env
+            load_dotenv()
 except ImportError:
     pass
 

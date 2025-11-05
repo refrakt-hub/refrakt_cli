@@ -149,6 +149,8 @@ def execute_full_pipeline(
         logger: Logger instance
         experiment_id: Unique experiment ID for consistent directory naming
     """
+    import os
+
     logger.info("🚀 Training phase started")
     train(cfg, logger=logger, experiment_id=experiment_id)
     logger.info("✅ Training completed successfully!")
@@ -157,10 +159,21 @@ def execute_full_pipeline(
 
     resolved_model_name = _resolve_model_name_train(cfg)
 
-    model_path = (
-        f"./checkpoints/{resolved_model_name}_{experiment_id}/weights/"
-        f"{resolved_model_name}.pth"
-    )
+    # Determine model path based on execution context (backend vs CLI)
+    # Check if running via backend (REFRAKT_JOB_DIR environment variable)
+    job_dir = os.getenv("REFRAKT_JOB_DIR")
+    if job_dir:
+        # Backend execution: use job directory
+        model_path = os.path.join(job_dir, "weights", f"{resolved_model_name}.pth")
+        logger.debug(f"Using backend job directory for model: {model_path}")
+    else:
+        # CLI execution: use checkpoints directory
+        model_path = (
+            f"./checkpoints/{resolved_model_name}_{experiment_id}/weights/"
+            f"{resolved_model_name}.pth"
+        )
+        logger.debug(f"Using CLI checkpoints directory for model: {model_path}")
+
     test(
         cfg,
         model_path=model_path,
