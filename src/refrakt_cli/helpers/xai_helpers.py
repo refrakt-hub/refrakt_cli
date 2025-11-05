@@ -48,11 +48,11 @@ def generate_and_save_explanations(
     logger: Optional[logging.Logger] = None,
 ) -> Dict[str, str]:
     """Generate explanations for each XAI method and save them as markdown files."""
-    from refrakt_cli.utils.gemini_utils import build_system_prompt
     from refrakt_cli.utils.llm_utils import generate_method_explanation
+    from refrakt_cli.utils.openai_utils import build_system_prompt
 
     system_prompt = build_system_prompt(logger)
-    model_name = os.environ.get("GEMINI_MODEL", "")
+    model_name = os.environ.get("OPENAI_MODEL", "gpt-4o")
 
     method_explanations = {}
     for method_name, method_files in xai_files_by_method.items():

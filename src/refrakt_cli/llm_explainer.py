@@ -11,8 +11,6 @@ try:
 except ImportError:
     pass
 
-from vertexai.generative_models import Part
-
 from refrakt_cli.helpers.llm_helpers import (
     find_latest_experiment_dir,
     generate_and_save_explanations,
@@ -26,7 +24,7 @@ from refrakt_cli.utils.explanation_utils import (
     extract_file_context,
     extract_metadata_context,
 )
-from refrakt_cli.utils.gemini_utils import add_images_to_content, build_system_prompt
+from refrakt_cli.utils.openai_utils import add_images_to_messages, build_system_prompt
 
 
 def _retry_logic(
@@ -80,32 +78,35 @@ def run_llm_explanations(logger: Optional[logging.Logger] = None) -> None:
             logger.error(f"Failed to process experiment directory {exp_dir}: {e}")
 
 
-def build_gemini_content(
+def build_openai_messages(
     metadata: Dict[str, Any],
     npy_files: List[str],
     png_files: List[str],
     config_files: List[str],
     logger: Optional[logging.Logger] = None,
-) -> List[Part]:
+) -> List[Dict[str, Any]]:
     """
-    Build structured content for Gemini API using the multimodal approach.
-    """
-    content_parts = []
+    Build structured messages for OpenAI API using the multimodal approach.
 
-    # Add system prompt as text
+    Returns:
+        List of messages in OpenAI format with text and images
+    """
+    # Add system prompt
     system_prompt = build_system_prompt(logger)
 
     # Build structured context
     context = build_structured_context(metadata, npy_files, png_files, config_files)
 
-    # Combine system prompt and context
-    full_prompt = f"{system_prompt}\n\n{context}"
-    content_parts.append(Part.from_text(full_prompt))
+    # Create messages list
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": context},
+    ]
 
-    # Add images as multimodal content
-    add_images_to_content(png_files, content_parts, logger)
+    # Add images to the user message
+    add_images_to_messages(png_files, messages, logger)
 
-    return content_parts
+    return messages
 
 
 def build_structured_context(

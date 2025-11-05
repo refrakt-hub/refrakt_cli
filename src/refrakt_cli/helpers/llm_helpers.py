@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 
 def setup_llm_environment(logger: Optional[logging.Logger] = None) -> Optional[str]:
     """
-    Initializes Vertex AI and validates the explanations directory.
+    Validates OpenAI API configuration and explanations directory.
 
     Args:
         logger: An optional logger instance.
@@ -13,16 +13,15 @@ def setup_llm_environment(logger: Optional[logging.Logger] = None) -> Optional[s
     Returns:
         The path to the explanations directory if setup is successful, otherwise None.
     """
-    from refrakt_cli.utils.vertex_ai_utils import initialize_vertex_ai
-
-    try:
+    # Validate OpenAI API key
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
         if logger:
-            logger.debug("Initializing Vertex AI...")
-        initialize_vertex_ai(logger)
-    except Exception as e:
-        if logger:
-            logger.error(f"Failed to initialize Vertex AI: {e}")
+            logger.error("OPENAI_API_KEY environment variable is required")
         return None
+
+    if logger:
+        logger.debug("OpenAI API key found, validating explanations directory...")
 
     base_dir = os.getcwd()
     explanations_dir = os.path.join(base_dir, "explanations")
@@ -115,11 +114,11 @@ def generate_and_save_explanations(
         save_explanation_to_markdown,
     )
     from refrakt_cli.utils.explanation_utils import combine_method_explanations
-    from refrakt_cli.utils.gemini_utils import build_system_prompt
     from refrakt_cli.utils.llm_utils import (
         generate_method_explanation,
         organize_xai_files,
     )
+    from refrakt_cli.utils.openai_utils import build_system_prompt
 
     # Find and organize XAI-related files
     npy_files, png_files, config_files = process_xai_files(exp_dir, logger)
@@ -182,7 +181,7 @@ def generate_and_save_explanations(
 
     # System prompt for LLM
     system_prompt = build_system_prompt(logger)
-    model_name = os.environ.get("GEMINI_MODEL", "")
+    model_name = os.environ.get("OPENAI_MODEL", "gpt-4o")
 
     method_explanations = {}
     for method_name, method_files in xai_files_by_method.items():

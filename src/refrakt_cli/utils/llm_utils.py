@@ -9,23 +9,26 @@ across multiple helper files.
 import json
 import logging
 import os
+import time
 from typing import Any, Dict, List, Optional
 
-from vertexai.generative_models import GenerativeModel, Part
+from openai import OpenAI
 
 
-def call_gemini_with_retry(
-    model: GenerativeModel,
-    content_parts: Any,
+def call_openai_with_retry(
+    client: OpenAI,
+    model: str,
+    messages: List[Dict[str, Any]],
     max_retries: int = 3,
     logger: Optional[logging.Logger] = None,
 ) -> str:
     """
-    Call Gemini with exponential backoff retry logic for rate limiting.
+    Call OpenAI with exponential backoff retry logic for rate limiting.
 
     Args:
-        model: Gemini GenerativeModel instance
-        content_parts: Content parts to send to the model
+        client: OpenAI client instance
+        model: Model name to use (e.g., "gpt-4o")
+        messages: List of messages in OpenAI format
         max_retries: Maximum number of retry attempts
         logger: Optional logger instance
 
@@ -36,17 +39,22 @@ def call_gemini_with_retry(
         try:
             if logger:
                 logger.info(
-                    f"Calling Gemini API (attempt {attempt + 1}/{max_retries + 1})"
+                    f"Calling OpenAI API (attempt {attempt + 1}/{max_retries + 1})"
                 )
-            response = model.generate_content(content_parts)
+            response = client.chat.completions.create(
+                model=model, messages=messages, temperature=0.3, max_tokens=4000
+            )
             if logger:
-                logger.info("Successfully received response from Gemini API")
-            return response.text
+                logger.info("Successfully received response from OpenAI API")
+            return response.choices[0].message.content or ""
         except Exception as e:
             if logger:
-                logger.error(f"Error calling Gemini: {e}")
+                logger.error(f"Error calling OpenAI: {e}")
             if attempt == max_retries:
                 return f"[ERROR] Failed to generate explanation: {e}"
+            # Exponential backoff
+            wait_time = 2**attempt
+            time.sleep(wait_time)
     return "[ERROR] Unexpected error in retry logic"
 
 
@@ -291,7 +299,7 @@ def generate_method_explanation(
         metadata: Experiment metadata
         config_files: List of configuration files
         system_prompt: System prompt for the LLM
-        model_name: Name of the model to use
+        model_name: Name of the model to use (e.g., "gpt-4o")
         logger: Optional logger instance
 
     Returns:
@@ -300,9 +308,6 @@ def generate_method_explanation(
     try:
         method_file_list = method_files.get("files", [])
 
-        # Build comprehensive content for the method
-        content_parts = [Part.from_text(system_prompt)]
-
         # Process files and build analysis
         file_analysis = _build_file_analysis_content(method_file_list, logger)
 
@@ -310,7 +315,12 @@ def generate_method_explanation(
         method_context = _build_method_context(
             method_name, metadata, config_files, file_analysis, method_file_list
         )
-        content_parts.append(Part.from_text(method_context))
+
+        # Build OpenAI messages format
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": method_context},
+        ]
 
         if logger:
             logger.info(
@@ -318,9 +328,15 @@ def generate_method_explanation(
                 f"{len(method_file_list)} files"
             )
 
-        # Create the model and generate explanation
-        model = GenerativeModel(model_name)
-        explanation = call_gemini_with_retry(model, content_parts, logger=logger)
+        # Initialize OpenAI client and generate explanation
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is required")
+
+        client = OpenAI(api_key=api_key)
+        explanation = call_openai_with_retry(
+            client, model_name, messages, logger=logger
+        )
 
         if logger:
             logger.info(f"Generated explanation for {method_name}")

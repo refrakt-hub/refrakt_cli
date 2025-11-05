@@ -1,16 +1,15 @@
+import base64
 import logging
 import os
-from typing import List, Optional
-
-from vertexai.generative_models import Part  # Corrected import for Part
+from typing import Any, Dict, List, Optional
 
 
 def build_system_prompt(logger: Optional[logging.Logger] = None) -> str:
     """
-    Build the system prompt for Gemini API by loading from explainer_prompt.txt.
+    Build the system prompt for OpenAI API by loading from explainer_prompt.txt.
     """
     if logger:
-        logger.info("Building system prompt for Gemini API.")
+        logger.info("Building system prompt for OpenAI API.")
 
     # Try to load the detailed system prompt from the file
     # Look for the prompt file in multiple possible locations
@@ -83,23 +82,52 @@ def build_system_prompt(logger: Optional[logging.Logger] = None) -> str:
         return default_prompt
 
 
-def add_images_to_content(
+def add_images_to_messages(
     png_files: List[str],
-    content_parts: List[Part],
+    messages: List[Dict[str, Any]],
     logger: Optional[logging.Logger] = None,
 ) -> None:
     """
-    Add image files as multimodal content parts.
+    Add image files to OpenAI messages using vision API format.
+    Images are encoded as base64 and added to the last user message.
+
+    Args:
+        png_files: List of paths to PNG image files
+        messages: List of messages in OpenAI format
+        logger: Optional logger instance
     """
+    if not png_files:
+        return
+
+    # Find or create the last user message
+    user_message = None
+    for msg in reversed(messages):
+        if msg.get("role") == "user":
+            user_message = msg
+            break
+
+    if user_message is None:
+        # Create a new user message if none exists
+        user_message = {"role": "user", "content": []}
+        messages.append(user_message)
+
+    # Convert content to list format if it's a string
+    if isinstance(user_message["content"], str):
+        user_message["content"] = [{"type": "text", "text": user_message["content"]}]
+    elif not isinstance(user_message["content"], list):
+        user_message["content"] = []
+
+    # Add images to the message
     for png_file in png_files:
         if logger:
-            logger.info(f"Adding image {png_file} to content parts.")
+            logger.info(f"Adding image {png_file} to OpenAI messages")
         try:
-            # For now, we'll skip image addition to avoid type issues
-            # TODO: Implement proper image handling with Vertex AI
-            if logger:
-                logger.info(
-                    f"Skipping image {png_file} - image handling not yet implemented"
+            # Read and encode image as base64
+            with open(png_file, "rb") as image_file:
+                image_data = base64.b64encode(image_file.read()).decode("utf-8")
+                image_url = f"data:image/png;base64,{image_data}"
+                user_message["content"].append(
+                    {"type": "image_url", "image_url": {"url": image_url}}
                 )
         except Exception as e:
             if logger:
